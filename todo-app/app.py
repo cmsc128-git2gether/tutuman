@@ -364,7 +364,7 @@ def login():
     session.clear() 
     session.permanent = True
     session["user_id"] = user["id"]
-    return redirect(url_for("profile"))
+    return redirect(url_for("index"))
 
 # Profile page shows the current user's account details
 @app.route('/profile')
