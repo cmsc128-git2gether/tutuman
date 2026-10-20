@@ -116,17 +116,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // rules returns a message or ''
     const rules = {
         email(value) {
-            if (!value.trim()) return 'Email is required.';
+            if (!value.trim()) return 'Please enter your email.';
             if (!EMAIL_PATTERN.test(value.trim())) return 'Please enter a valid email address.';
             return '';
         },
         display_name(value) {
-            return value.trim() ? '' : 'Display name is required.';
+            return value.trim() ? '' : 'Please enter your display name.';
         },
         password(value) {
-            if (!value) return 'Password is required.';
+            if (!value) return 'Please enter a password.';
             const min = form.elements.password.minLength;
-            if (isRegister && min > 0 && value.length < min) {
+            if (min > 0 && value.length < min) {
                 return `Password must be at least ${min} characters.`;
             }
             return '';
@@ -138,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
     };
 
+    // write error message 
     function showError(input, message) {
         const errorEl = input.closest('.field').querySelector('.field-error');
         errorEl.textContent = message;
@@ -145,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         input.setAttribute('aria-invalid', message !== '');
     }
 
+    // validate field using rules 
     function validateField(input) {
         const rule = rules[input.name];
         if (!rule) return '';
@@ -159,9 +161,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // check when the user leaves a field
         input.addEventListener('blur', () => validateField(input));
 
-        // recheck sintantly as they fix it
+        // recheck instantly as they fix it
         input.addEventListener('input', () => {
-            if (input.classList.contains('invalid')) validateField(input);
+            if (input.name === 'email' || input.name === 'password') {
+                // only show errors after the user has typed something
+                if (input.value) validateField(input);
+                else showError(input, '');
+            } else if (input.classList.contains('invalid')) {
+                validateField(input);
+            }
 
             // changing the password can fix or break the confirm field
             if (input.name === 'password' && form.elements.confirm_password?.value) {
@@ -184,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
 document.addEventListener('DOMContentLoaded', () => {
     if (!document.querySelector('.profile-page')) return;
 
@@ -204,15 +213,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const rules = {
         display_name(value) {
             const name = value.trim();
-            if (!name) return 'Display name is required.';
+            if (!name) return 'Please enter your display name.';
             if (name.length > 100) return 'Display name must be 100 characters or fewer.';
             return '';
         },
         current_password(value) {
-            return value ? '' : 'Enter your current password.';
+            return value ? '' : 'Please enter your current password.';
         },
         new_password(value, form) {
-            if (!value) return 'Enter a new password.';
+            if (!value) return 'Please enter a new password.';
             const min = form.elements.new_password.minLength;
             if (min > 0 && value.length < min) {
                 return `Password must be at least ${min} characters.`;
@@ -228,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return '';
         },
         delete_password(value) {
-            return value ? '' : 'Enter your password to confirm.';
+            return value ? '' : 'Please enter your password to confirm.';
         }
     };
 
@@ -459,3 +468,10 @@ if (filterBtn && filterPanel) {
         }
     });
 }
+
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        document.documentElement.style.visibility = 'hidden';
+        window.location.reload();
+    }
+});
