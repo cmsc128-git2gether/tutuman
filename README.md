@@ -26,10 +26,9 @@ A multi-user todo web app for organizing, tracking, and categorizing tasks. Each
 
 ## How Activity 1 and Activity 2 were merged
 
-- **Branches:**
-- **Strategy:**
+- **Branches:** During Activity 2, branches `act-feat/crud-<lastname>` and `act-feat/auth-<lastname>` were already merged to form a working UBAC. Along with this merge, the minimum requirements were met.
+- **Strategy:** Branch `act-feat/crud-<lastname>` was merged into `act-feat/auth-<lastname>`. Any conflicts that resulted in this merge were resolved, then a pull request was made to merge the working version into `main`.
 - **Conflicts resolved:**
-  -
 
 ## Project structure
 
@@ -56,7 +55,6 @@ todo-app/
 ```bash
    git clone <repo-url>
    cd <repo-folder>
-   git checkout act3-ubac
 ```
 
 2. **Create and activate a virtual environment** (recommended):
