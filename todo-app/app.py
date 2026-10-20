@@ -37,6 +37,16 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
 app.permanent_session_lifetime = timedelta(days=7)
 
+
+# prevents cached copy of pages from being displayed after logout
+@app.after_request
+def no_cache(response):
+    if request.endpoint != 'static':
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 # checks if user is logged in 
 def login_required(view):
     @wraps(view)
