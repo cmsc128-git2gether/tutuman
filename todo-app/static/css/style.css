@@ -894,6 +894,32 @@
                     line-height: 20px;
                     color: var(--high-priority);
                 }
+
+                .field-footer {
+                    display: flex;
+                    align-items: flex-start;
+                    justify-content: space-between;
+                    gap: var(--spacing-sm);
+                    margin-top: 4px;
+
+                    .field-error {
+                        flex: 1;
+                        margin-top: 0;
+                    }
+
+                    .forgot-link {
+                        flex-shrink: 0;
+                        margin-left: auto;
+                        font-size: 12px;
+                        line-height: 20px;
+                        color: var(--accent);
+                        text-decoration: none;
+
+                        &:hover {
+                            text-decoration: underline;
+                        }
+                    }
+                }
             }
 
             .password-field {
@@ -1486,6 +1512,32 @@
                 font-size: 12px;
                 line-height: 20px;
                 color: var(--high-priority);
+            }
+
+            .field-footer {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: var(--spacing-sm);
+                margin-top: 4px;
+
+                .field-error {
+                    flex: 1;
+                    margin-top: 0;
+                }
+
+                .forgot-link {
+                    flex-shrink: 0;
+                    margin-left: auto;
+                    font-size: 12px;
+                    line-height: 20px;
+                    color: var(--accent);
+                    text-decoration: none;
+
+                    &:hover {
+                        text-decoration: underline;
+                    }
+                }
             }
         }
 
