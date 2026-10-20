@@ -10,8 +10,7 @@
         @view-transition {
             navigation: auto;
         }
-    
-        </style>
+    </style>
 </head>
 
 <body class="auth-page">
@@ -50,8 +49,10 @@
                         <i class="bi bi-eye"></i>
                     </button>
                 </div>
-                <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot password?</a>
-                <p class="field-error"></p>
+                <div class="field-footer">
+                    <p class="field-error"></p>
+                    <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot password?</a>
+                </div>
             </div>
 
             <button type="submit">Log in</button>
