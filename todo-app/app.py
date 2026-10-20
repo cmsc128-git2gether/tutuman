@@ -340,12 +340,27 @@ def login():
     email = request.form.get('email', '').strip().lower()
     password = request.form.get('password', '')
 
-    user = get_user_by_email(email) if email else None
-    if user is None or not check_password_hash(user["password_hash"], password):
-        flash("Invalid credentials.", "error")
-        return render_template('login.html', email=email)
+    error = None
+    user = None
+    
+    if not email or not password:
+        error = "Email and password are required."
+    elif not EMAIL_PATTERN.match(email):
+        error = "Please enter a valid email address."
+    elif len(password) < MIN_PASSWORD_LENGTH:
+        error = f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
+    else:
+        user = get_user_by_email(email)
+        if user is None:
+            error = "No account found with that email."
+        elif not check_password_hash(user["password_hash"], password):
+            error = "Incorrect password."
 
-    session.clear()
+    if error:
+        flash(error, "error")
+        return render_template('login.html', email=email)
+    
+    session.clear() 
     session.permanent = True
     session["user_id"] = user["id"]
     return redirect(url_for("profile"))
