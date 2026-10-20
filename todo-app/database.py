@@ -189,6 +189,7 @@ def restore_task(task_id, user_id):
         (task_id, user_id)
     )
     conn.commit()
+    
     cursor.close()
     conn.close()
     
@@ -229,6 +230,7 @@ def create_user (email, display_name, password_hash):
         (email, display_name, password_hash)
     )
     conn.commit()
+    
     user_id = cursor.lastrowid
     cursor.close()
     conn.close()
@@ -263,6 +265,7 @@ def update_display_name(user_id, display_name):
         (display_name, user_id)
     )
     conn.commit()
+    
     cursor.close()
     conn.close()
 
@@ -275,6 +278,7 @@ def update_password_hash(user_id, password_hash):
         (password_hash, user_id)
     )
     conn.commit()
+    
     cursor.close()
     conn.close()
 
@@ -284,6 +288,7 @@ def delete_user(user_id):
     cursor = conn.cursor()
     cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
     conn.commit()
+    
     cursor.close()
     conn.close()
 
@@ -326,6 +331,7 @@ def create_reset_token(user_id, token, minutes=30):
         (user_id, _hash_token(token), minutes)
     )
     conn.commit()
+    
     cursor.close()
     conn.close()
 
@@ -351,5 +357,6 @@ def delete_reset_token(reset_id):
     cursor = conn.cursor()
     cursor.execute("DELETE FROM password_resets WHERE id = %s", (reset_id,))
     conn.commit()
+    
     cursor.close()
     conn.close()
