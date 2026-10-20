@@ -32,6 +32,7 @@ from database import (
 )
 
 load_dotenv()
+print("SMTP_HOST =", os.getenv("SMTP_HOST"))
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
@@ -367,6 +368,7 @@ def login():
 
 # Profile page shows the current user's account details
 @app.route('/profile')
+@login_required
 def profile():
     user = get_user_by_id(session["user_id"])
     if user is None:
