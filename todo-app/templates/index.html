@@ -26,23 +26,36 @@
             </section>
 
             <nav class="view-menu">
-                <p class="view-title">Views</p>
+                <p class="view-title">Lists</p>
+                {% for l in personal %}
+                <a href="{{ url_for('show_list', list_id=l.id) }}"
+                    class="{{ 'active' if l.id == current_list.id }} view-item">
+                    <p class="view-name">{{ l.name }}</p>
+                    <p class="view-value">{{ l.open_count }}</p>
+                </a>
+                {% endfor %}
 
-                <a href="{{ url_for('index', tab='all', view=view_mode) }}"
-                    class="{{ 'active' if tab == 'all' }} view-item">
-                    <p class="view-name">All</p>
-                    <p class="view-value">{{ total_count }}</p>
+                <p class="view-title shared-title">
+                    Shared
+                    <button type="button" class="icon-btn" id="newListBtn" aria-label="New shared list">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                </p>
+                {% for l in shared %}
+                <a href="{{ url_for('show_list', list_id=l.id) }}"
+                    class="{{ 'active' if l.id == current_list.id }} view-item">
+                    <p class="view-name">{{ l.name }}</p>
+                    <p class="view-value">{{ l.open_count }}</p>
                 </a>
-                <a href="{{ url_for('index', tab='ongoing', view=view_mode) }}"
-                    class="{{ 'active' if tab == 'ongoing' }} view-item">
-                    <p class="view-name">Ongoing</p>
-                    <p class="view-value">{{ open_count }}</p>
-                </a>
-                <a href="{{ url_for('index', tab='completed', view=view_mode) }}"
-                    class="{{ 'active' if tab == 'completed' }} view-item">
-                    <p class="view-name">Completed</p>
-                    <p class="view-value">{{ done_count }}</p>
-                </a>
+                {% else %}
+                <p class="view-name list-empty">No shared lists yet</p>
+                {% endfor %}
+
+                <form method="POST" action="{{ url_for('create_list_route') }}" id="newListForm" class="new-list-form"
+                    hidden>
+                    <input type="text" name="name" maxlength="100" placeholder="List name" required>
+                    <button type="submit" class="add-task-btn">Create</button>
+                </form>
             </nav>
 
             <section class="stats">
@@ -82,7 +95,7 @@
             <!-- header section -->
             <header class="content-header">
                 <div class="header-title">
-                    <p>{{ tab | capitalize if tab != 'all' else 'All Tasks' }}</p>
+                    <p>{{ current_list.name }}</p>
                 </div>
 
                 <div class="header-actions">
@@ -94,7 +107,7 @@
                         </button>
 
                         <div class="filter-panel" id="filterPanel">
-                            <form method="GET" action="/">
+                            <form method="GET" action="{{ url_for('show_list', list_id=current_list.id) }}">
                                 <input type="hidden" name="tab" value="{{ tab }}">
                                 <input type="hidden" name="view" value="{{ view_mode }}">
 
@@ -120,7 +133,8 @@
                                 </div>
 
                                 <div class="filter-actions">
-                                    <a href="/?tab={{ tab }}&view={{ view_mode }}" class="cancel-btn">Clear</a>
+                                    <a href="{{ url_for('show_list', list_id=current_list.id, tab=tab, view=view_mode) }}"
+                                        class="cancel-btn">Clear</a>
                                     <button type="submit" class="add-task-btn">Apply</button>
                                 </div>
                             </form>
@@ -128,10 +142,12 @@
                     </div>
 
                     <div class="view-toggle">
-                        <a href="/?tab={{ tab }}&view=list" class="{{ 'active' if view_mode == 'list' }}">
+                        <a href="{{ url_for('show_list', list_id=current_list.id, tab=tab, view='list') }}"
+                            class="{{ 'active' if view_mode == 'list' }}">
                             <i class="bi bi-list-ul"></i> List
                         </a>
-                        <a href="/?tab={{ tab }}&view=calendar" class="{{ 'active' if view_mode == 'calendar' }}">
+                        <a href="{{ url_for('show_list', list_id=current_list.id, tab=tab, view='calendar') }}"
+                            class="{{ 'active' if view_mode == 'calendar' }}">
                             <i class="bi bi-calendar"></i> Calendar
                         </a>
                     </div>
@@ -268,6 +284,7 @@
                 <div class="form-group">
                     <label for="title">Task</label>
                     <input type="text" id="title" name="title" placeholder="What needs to be done?" required>
+                    <input type="hidden" name="list_id" value="{{ current_list.id }}">
                 </div>
 
                 <div class="form-row">
