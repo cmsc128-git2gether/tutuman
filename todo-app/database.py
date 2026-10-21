@@ -125,10 +125,10 @@ def get_all_tasks(user_id, list_id):
         SELECT t.*
         FROM tasks t
         JOIN list_members m ON m.list_id = t.list_id
-        WHERE t.user_id = %sAND m.user_id = %s AND t.deleted = 0
+        WHERE t.list_id = %s AND m.user_id = %s AND t.deleted = 0
         ORDER BY t.due_date, t.due_time
         """,
-        (list_id,user_id)
+        (list_id, user_id)
     )
 
     tasks = cursor.fetchall()
