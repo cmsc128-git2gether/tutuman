@@ -60,7 +60,7 @@ def init_db():
 
 
 # Adding a task
-def add_task(user_id, title, due_date, due_time, priority, tag):
+def add_task(user_id, list_id, title, due_date, due_time, priority, tag):
     conn = get_db_connection()
 
     if conn is None:
@@ -71,14 +71,17 @@ def add_task(user_id, title, due_date, due_time, priority, tag):
     cursor.execute(
         """
         INSERT INTO tasks
-        (user_id, title, due_date, due_time, priority, tag)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        (user_id, list_id, title, due_date, due_time, priority, tag)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        from list_members
+        WHERE list_id = %s and user_id = %s
         """,
-        (user_id, title, due_date, due_time, priority, tag)
+        (user_id, list_id, title, due_date, due_time, priority, tag)
     )
 
     conn.commit()
 
+    task_id = cursor.lastrowid if cursor.rowcount == 1 else None   # None = not a member
     cursor.close()
     conn.close()
 
@@ -93,7 +96,10 @@ def get_task(task_id, user_id):
     cursor = conn.cursor(dictionary=True)
 
     cursor.execute(
-        "SELECT * FROM tasks WHERE id = %s and user_id = %s",
+        """SELECT t.* 
+        FROM tasks t 
+        JOIN list_members m ON m.list_id = t.list_id
+        WHERE t.id = %s and m.user_id = %s""",
         (task_id, user_id)
     )
 
@@ -106,7 +112,7 @@ def get_task(task_id, user_id):
 
 
 # Returns all tasks
-def get_all_tasks(user_id):
+def get_all_tasks(user_id, list_id):
     conn = get_db_connection()
 
     if conn is None:
@@ -118,10 +124,11 @@ def get_all_tasks(user_id):
         """
         SELECT *
         FROM tasks
-        WHERE user_id = %s
-        ORDER BY completed ASC, due_date ASC, due_time ASC, created_at DESC
+        JOIN list_members m ON m.list_id = t.list_id
+        WHERE t.user_id = %sAND m.user_id = %s AND t.deleted = 0
+        ORDER BY t.due_date, t.due_time
         """,
-        (user_id,)
+        (list_id,user_id)
     )
 
     tasks = cursor.fetchall()
@@ -143,19 +150,20 @@ def update_task(task_id, user_id, title, due_date, due_time, priority, tag):
 
     cursor.execute(
         """
-        UPDATE tasks
-        SET title = %s,
-            due_date = %s,
-            due_time = %s,
-            priority = %s,
-            tag = %s
-        WHERE id = %s AND user_id = %s
+        UPDATE tasks t
+        JOIN list_members m ON m.list_id = t.list_id
+        SET t.title = %s,
+            t.due_date = %s,
+            t.due_time = %s,
+            t.priority = %s,
+            t.tag = %s
+        WHERE t.id = %s AND t.user_id = %s
         """,
         (title, due_date, due_time, priority, tag, task_id, user_id)
     )
 
     conn.commit()
-
+    changed = cursor.rowcount > 0
     cursor.close()
     conn.close()
 
@@ -170,14 +178,19 @@ def delete_task(task_id, user_id):
     cursor = conn.cursor()
 
     cursor.execute(
-        "UPDATE tasks SET deleted = 1 WHERE id = %s AND user_id = %s",
+        """UPDATE tasks t
+        JOIN list_members m ON m.list_id = t.list_id
+        SET t.deleted = 1 
+        WHERE t.id = %s AND t.user_id = %s""",
         (task_id, user_id,)
     )
 
     conn.commit()
-
+    changed = cursor.rowcount > 0
+    
     cursor.close()
     conn.close()
+    return changed
 
 def restore_task(task_id, user_id):
     conn = get_db_connection()
@@ -185,13 +198,19 @@ def restore_task(task_id, user_id):
         return
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE tasks SET deleted = 0 WHERE id = %s AND user_id = %s",
+        """
+        UPDATE tasks t
+        JOIN list_members m ON m.list_id = t.list_id
+        SET t.deleted = 0 
+        WHERE t.id = %s AND t.user_id = %s""",
         (task_id, user_id)
     )
     conn.commit()
+    changed = cursor.rowcount > 0
     
     cursor.close()
     conn.close()
+    return changed
     
 # Mark task as complete / incomplete
 def toggle_task(task_id, user_id):
@@ -204,24 +223,27 @@ def toggle_task(task_id, user_id):
 
     cursor.execute(
         """
-        UPDATE tasks
-        SET completed = CASE
-            WHEN completed = 0 THEN 1
+        UPDATE tasks t
+        JOIN list_members m ON m.list_id = t.list_id
+        SET t.completed = CASE
+            WHEN t.completed = 0 THEN 1
             ELSE 0
         END
-        WHERE id = %s AND user_id = %s
+        WHERE t.id = %s AND t.user_id = %s
         """,
         (task_id, user_id)
     )
 
     conn.commit()
-
+    changed = cursor.rowcount > 0
+    
     cursor.close()
     conn.close()
+    return changed
 
 # ------------- LAB 2 FUNCTIONS ------------- #
 
-# create user function; automatically creates personan list on registration
+# create user function; automatically creates personal list on registration
 def create_user (email, display_name, password_hash):
     conn = get_db_connection()
     cursor = conn.cursor()
