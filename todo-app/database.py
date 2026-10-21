@@ -76,7 +76,7 @@ def add_task(user_id, list_id, title, due_date, due_time, priority, tag):
         from list_members
         WHERE list_id = %s and user_id = %s
         """,
-        (user_id, list_id, title, due_date, due_time, priority, tag)
+        (user_id, list_id, title, due_date, due_time, priority, tag, list_id, user_id)
     )
 
     conn.commit()
@@ -122,8 +122,8 @@ def get_all_tasks(user_id, list_id):
 
     cursor.execute(
         """
-        SELECT *
-        FROM tasks
+        SELECT t.*
+        FROM tasks t
         JOIN list_members m ON m.list_id = t.list_id
         WHERE t.user_id = %sAND m.user_id = %s AND t.deleted = 0
         ORDER BY t.due_date, t.due_time
@@ -373,7 +373,7 @@ def get_user_by_id(user_id):
     return user
 
 # find user by username or email for shared list invites
-def get_user_for_invite(value):
+def find_user_for_invite(value):
     value = value.strip()
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -387,7 +387,7 @@ def get_user_for_invite(value):
     return user
 
 # fetches every list current user belongs to 
-def get_user_lists(user_id):
+def get_lists_for_user(user_id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -509,7 +509,7 @@ def delete_user(user_id):
     conn.close()
 
 # get statustics for a user
-def get_task_stats(user_id):
+def get_task_stats(list_id, user_id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
@@ -519,10 +519,11 @@ def get_task_stats(user_id):
             COALESCE(SUM(completed = 1), 0) AS done,
             COALESCE(SUM(completed = 0), 0) AS open,
             COALESCE(SUM(completed = 0 AND due_date < CURDATE()), 0) AS overdue
-        FROM tasks
-        WHERE user_id = %s
+        FROM tasks t
+        JOIN list_members m ON m.list_id = t.list_id
+        WHERE t.list_id = %s AND m.user_id = %s AND t.deleted = 0
         """,
-        (user_id,)
+        (list_id, user_id)
     )
     stats = cursor.fetchone()
     cursor.close()

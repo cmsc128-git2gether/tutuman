@@ -3,7 +3,7 @@ import os
 import re
 import secrets
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -29,6 +29,12 @@ from database import (
     create_reset_token,
     get_valid_reset,
     delete_reset_token,
+    get_lists_for_user,
+    create_shared_list,
+    is_member,
+    get_list_details,
+    get_members,
+    get_all_tasks
 )
 
 load_dotenv()
@@ -504,5 +510,49 @@ def reset_password(token):
     return redirect(url_for('login'))
 
 
+# --------------- LAB 3 FUNCTIONS --------------- # 
+
+# calls function in database.py to return lists user belongs to
+@app.route("/lists")
+@login_required
+def lists():
+    personal, _ = get_lists_for_user(session["user_id"])
+    return redirect(url_for("view_list", list_id=personal[0]["id"]))
+
+@app.route("/lists", methods=["POST"])
+@login_required
+def create_list_route():
+    name = request.form.get("name", "").strip()
+
+    if not name or len(name) > 100:
+        abort(400)
+
+    list_id = create_shared_list(session["user_id"], name)
+    return redirect(url_for("show_list", list_id=list_id))
+
+@app.route("/lists/<int:list_id>")
+@login_required
+def show_list(list_id):
+    uid = session["user_id"]
+
+    if not is_member(list_id, uid):
+        abort(404)
+
+    current_list = get_list_details(list_id)
+    personal, shared = get_lists_for_user(uid)
+    tasks = get_all_tasks(uid, list_id)
+    members = get_members(list_id)
+    stats = get_task_stats(uid, list_id)
+
+    return render_template(
+        "index.html",
+        current_list=current_list,
+        personal=personal,
+        shared=shared,
+        tasks=tasks,
+        members=members,
+        stats=stats,
+        is_owner=(current_list["owner_id"] == uid),
+    )
 if __name__ == '__main__':
     app.run(debug=True)   
