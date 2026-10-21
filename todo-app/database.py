@@ -80,10 +80,10 @@ def add_task(user_id, list_id, title, due_date, due_time, priority, tag):
     )
 
     conn.commit()
-
     task_id = cursor.lastrowid if cursor.rowcount == 1 else None   # None = not a member
     cursor.close()
     conn.close()
+    return task_id
 
 
 # Returns one single task based on task_id
@@ -166,6 +166,8 @@ def update_task(task_id, user_id, title, due_date, due_time, priority, tag):
     changed = cursor.rowcount > 0
     cursor.close()
     conn.close()
+    
+    return changed
 
 
 # Delete task
@@ -276,6 +278,54 @@ def create_user (email, display_name, password_hash):
         cursor.close()
         conn.close()
 
+# fetches list details, mainly for finding out ownership
+def get_list_details(list_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT id, name, owner_id, is_personal FROM lists WHERE id = %s",
+        (list_id,)
+    )
+    lst = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return lst
+
+# owned of list allowed to removed member
+def remove_member(list_id, owner_id, member_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        DELETE m FROM list_members m
+        JOIN lists l ON l.id = m.list_id
+        WHERE m.list_id = %s
+          AND m.user_id = %s
+          AND l.owner_id = %s
+          AND m.user_id <> l.owner_id
+        """,
+        (list_id, member_id, owner_id)
+    )
+    conn.commit()
+    removed = cursor.rowcount > 0
+    cursor.close()
+    conn.close()
+    return removed
+
+# deletes shared lists only, personal lists cant be deleted
+def delete_list(list_id, owner_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM lists WHERE id = %s AND owner_id = %s AND is_personal = 0",
+        (list_id, owner_id)
+    )
+    conn.commit()
+    deleted = cursor.rowcount > 0
+    cursor.close()
+    conn.close()
+    return deleted
+
 # creates shared list 
 def create_shared_list (owner_id, name):
     conn = get_db_connection()
@@ -307,6 +357,30 @@ def get_user_by_email(email):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return user
+
+# find user and get info in db using id
+def get_user_by_id(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return user
+
+# find user by username or email for shared list invites
+def get_user_for_invite(value):
+    value = value.strip()
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT id, email, username, display_name FROM users WHERE email = %s OR username = %s",
+        (value, value)
+    )
     user = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -397,16 +471,6 @@ def get_members(list_id):
     finally:
         cursor.close()
         conn.close()
-
-# find user and get info in db using id
-def get_user_by_id(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-    user = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    return user
 
 # for edit profile function
 def update_display_name(user_id, display_name):
