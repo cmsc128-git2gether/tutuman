@@ -475,3 +475,13 @@ window.addEventListener('pageshow', (event) => {
         window.location.reload();
     }
 });
+
+// listener for creating shared lists 
+const newListBtn = document.getElementById("newListBtn");
+if (newListBtn) {
+    newListBtn.addEventListener("click", () => {
+        const form = document.getElementById("newListForm");
+        form.hidden = !form.hidden;
+        if (!form.hidden) form.querySelector("input").focus();
+    });
+}
