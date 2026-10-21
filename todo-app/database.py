@@ -254,6 +254,32 @@ def create_user (email, display_name, password_hash):
         cursor.close()
         conn.close()
 
+# creates shared list 
+def create_shared_list (owner_id, name):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute(
+            "INSERT INTO lists (name, owner_id, is_personal) VALUES (%s, %s, 0)",
+            (name, owner_id)
+        )
+        list_id = cursor.lastrowid
+
+        cursor.execute(
+            "INSERT INTO list_members (list_id, user_id) VALUES (%s, %s)",
+            (list_id, owner_id)
+        )
+
+        conn.commit()
+        return list_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+        
 # find user and get info in db using email
 def get_user_by_email(email):
     conn = get_db_connection()
@@ -263,6 +289,92 @@ def get_user_by_email(email):
     cursor.close()
     conn.close()
     return user
+
+# fetches every list current user belongs to 
+def get_user_lists(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute(
+            """
+            SELECT l.id, l.name, l.owner_id, l.is_personal,
+                   (SELECT COUNT(*) FROM tasks t
+                    WHERE t.list_id = l.id
+                      AND t.deleted = 0
+                      AND t.completed = 0) AS open_count
+            FROM lists l
+            JOIN list_members m ON m.list_id = l.id
+            WHERE m.user_id = %s
+            ORDER BY l.is_personal DESC, l.created_at
+            """,
+            (user_id,)
+        )
+        rows = cursor.fetchall()
+
+        personal = [r for r in rows if r["is_personal"]]
+        shared = [r for r in rows if not r["is_personal"]]
+        return personal, shared
+    finally:
+        cursor.close()
+        conn.close()
+
+# checks if user is in this specific list, also prevents access by url
+def is_member(list_id, user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "SELECT 1 FROM list_members WHERE list_id = %s AND user_id = %s",
+            (list_id, user_id)
+        )
+        return cursor.fetchone() is not None
+    finally:
+        cursor.close()
+        conn.close()
+        
+# adds member to list; ignores if already on list
+def add_member(list_id, user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "INSERT IGNORE INTO list_members (list_id, user_id) VALUES (%s, %s)",
+            (list_id, user_id)
+        )
+        conn.commit()
+        return cursor.rowcount == 1    # true = added, false = already a member
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+# returns people part of list, for showing later who added which tasks and member count
+def get_members(list_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute(
+            """
+            SELECT u.id, u.display_name, u.email,
+                   (u.id = l.owner_id) AS is_owner
+            FROM list_members m
+            JOIN users u ON u.id = m.user_id
+            JOIN lists l ON l.id = m.list_id
+            WHERE m.list_id = %s
+            ORDER BY is_owner DESC, m.joined_at
+            """,
+            (list_id,)
+        )
+        return cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
 
 # find user and get info in db using id
 def get_user_by_id(user_id):
