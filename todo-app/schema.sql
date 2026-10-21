@@ -1,5 +1,4 @@
 DROP TABLE IF EXISTS tasks;
-DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS list_members;
 DROP TABLE IF EXISTS password_resets;
 DROP TABLE IF EXISTS lists;
@@ -37,13 +36,13 @@ CREATE TABLE password_resets (
     reset_token VARCHAR(255) NOT NULL UNIQUE,
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE tasks (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    user_id INT NOT NULL,       -- creator of shared list
+    list_id INT NOT NULL,       -- list where task is part of
     title VARCHAR(255) NOT NULL,
     due_date DATE,
     due_time TIME,
@@ -52,10 +51,10 @@ CREATE TABLE tasks (
     completed TINYINT NOT NULL DEFAULT 0,
     deleted TINYINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     CHECK (priority IN ('Low', 'Med', 'High')),
-    CHECK (tag IN ('School', 'Personal', 'Others'))
-
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    CHECK (tag IN ('School', 'Personal', 'Others')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE
 );
+
 
