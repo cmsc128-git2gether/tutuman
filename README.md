@@ -27,8 +27,11 @@ A multi-user todo web app for organizing, tracking, and categorizing tasks. Each
 ## How Activity 1 and Activity 2 were merged
 
 - **Branches:** During Activity 2, branches `act-feat/crud-<lastname>` and `act-feat/auth-<lastname>` were already merged to form a working UBAC. Along with this merge, the minimum requirements were met.
-- **Strategy:** Branch `act-feat/crud-<lastname>` was merged into `act-feat/auth-<lastname>`. Any conflicts that resulted in this merge were resolved, then a pull request was made to merge the working version into `main`.
+- **Strategy:**  Each partner was assigned specific features and coded them in their own branch for Activity 2. Once a feature was done, its branch was merged into `main`, so `main` always holds the working copy of the project.
 - **Conflicts resolved:**
+   1. Function parameters (`database.py`, `app.py`): adding the `users`, `lists`, `list_members`, and `password_resets` tables, and the `user_id` and `list_id` columns on `tasks`, meant existing functions needed extra parameters. For example, task functions that took only a `task_id` now also take the logged-in user's ID, read from `session["user_id"]` in the route, so the backend can check ownership or list membership.
+   2. Routes (`app.py`): the task routes were updated to require login, pass the session user to the database functions.
+   3. SQLite to MySQL migration: Activity 1 used SQLite, so database functions and queries were rewritten for MySQL (`%s` placeholders, MySQL types). The seeder (`seed.py`) also had to be updated, because it was missing arguments for the new schema fields (`user_id`) and failed with incomplete inserts.
 
 ## Project structure
 
