@@ -221,20 +221,38 @@ def toggle_task(task_id, user_id):
 
 # ------------- LAB 2 FUNCTIONS ------------- #
 
-# create user function
+# create user function; automatically creates personan list on registration
 def create_user (email, display_name, password_hash):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO users (email, display_name, password_hash) VALUES (%s, %s, %s)",
-        (email, display_name, password_hash)
-    )
-    conn.commit()
     
-    user_id = cursor.lastrowid
-    cursor.close()
-    conn.close()
-    return user_id
+    try: 
+        cursor.execute(
+            "INSERT INTO users (email, display_name, password_hash) VALUES (%s, %s, %s)",
+            (email, display_name, password_hash)
+        )
+        user_id = cursor.lastrowid
+        
+        cursor.execute(
+            "INSERT INTO lists (name, owner_id, is_personal) VALUES (%s, %s, 1)",
+            ("Personal", user_id)
+        )
+        list_id = cursor.lastrowid
+
+        cursor.execute(
+            "INSERT INTO list_members (list_id, user_id) VALUES (%s, %s)",
+            (list_id, user_id)
+        )
+        conn.commit()
+        return user_id
+    
+    except Exception:
+        conn.rollback()
+        raise
+    
+    finally:
+        cursor.close()
+        conn.close()
 
 # find user and get info in db using email
 def get_user_by_email(email):
