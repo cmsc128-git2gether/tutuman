@@ -36,6 +36,8 @@ from database import (
     get_members,
     get_all_tasks,
     get_profile_task_stats,
+    add_member,
+    find_user_for_invite,
 )
 
 load_dotenv()
@@ -558,6 +560,40 @@ def show_list(list_id):
 def avatar_color(user_id):
     hue = (int(user_id) * 137) % 360   # 137 spreads neighboring ids apart
     return f"hsl({hue}, 55%, 45%)"
+
+@app.template_filter('initials')
+def initials(name):
+    parts = (name or '?').split()
+    return ''.join(p[0] for p in parts[:2]).upper()
+
+@app.route("/lists/<int:list_id>/members", methods=["POST"])
+@login_required
+def add_list_member(list_id):
+    uid = session["user_id"]
+
+    lst = get_list_details(list_id)
+    if lst is None or not is_member(list_id, uid):
+        abort(404)
+    if lst["owner_id"] != uid:
+        abort(403)                       # members can see the list but can't invite
+    if lst["is_personal"]:
+        abort(400)                       # personal lists can't be shared
+
+    value = request.form.get("user", "").strip()
+    if not value:
+        flash("Enter a username or email.")
+        return redirect(url_for("show_list", list_id=list_id))
+
+    target = find_user_for_invite(value)
+    if target is None:
+        flash("No user found.")
+    elif add_member(list_id, target["id"]):
+        flash(f"{target['display_name']} added.")
+    else:
+        flash("That user is already a member.")
+
+    return redirect(url_for("show_list", list_id=list_id))
+
 
 if __name__ == '__main__':
     app.run(debug=True)   
