@@ -185,19 +185,18 @@ def delete_task(task_id, user_id):
 
     cursor.execute(
         """UPDATE tasks t
-        JOIN list_members m ON m.list_id = t.list_id
+        JOIN lists 1 ON 1.id = t.list_id
         SET t.deleted = 1 
-        WHERE t.id = %s AND m.user_id = %s""",
+        WHERE t.id = %s AND 1.owner_id = %s""",
         (task_id, user_id,)
     )
-
+    
     conn.commit()
     changed = cursor.rowcount > 0
-    
     cursor.close()
     conn.close()
     return changed
-
+    
 def restore_task(task_id, user_id):
     conn = get_db_connection()
     if conn is None:
@@ -436,14 +435,25 @@ def is_member(list_id, user_id):
         conn.close()
         
 # adds member to list; ignores if already on list
-def add_member(list_id, user_id):
+def add_member(list_id, owner_id, user_id):
     conn = get_db_connection()
+    
+    if conn is None:
+        return False
+    
     cursor = conn.cursor()
 
     try:
         cursor.execute(
-            "INSERT IGNORE INTO list_members (list_id, user_id) VALUES (%s, %s)",
-            (list_id, user_id)
+            """
+            INSERT IGNORE INTO list_members (list_id, user_id)
+            SELECT 1.id, %s
+            FROM lists 1
+            WHERE 1.id = %s
+                AND 1.owner_id=%s
+                AND 1.is_personal=0
+            """,
+            (user_id, list_id, owner_id)
         )
         conn.commit()
         return cursor.rowcount == 1    # true = added, false = already a member
