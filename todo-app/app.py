@@ -586,13 +586,15 @@ def add_list_member(list_id):
 
     target = find_user_for_invite(value)
     if target is None:
-        flash("No user found.")
+        flash("No user found.", "error")
+    elif target["id"] == uid:
+        flash("You're already the owner of this list.", "error")
     elif add_member(list_id, target["id"]):
-        flash(f"{target['display_name']} added.")
+        flash(f"{target['display_name']} added.", "success")
     else:
-        flash("That user is already a member.")
+        flash("That user is already a member.", "error")
 
-    return redirect(url_for("show_list", list_id=list_id))
+    return redirect(url_for("show_list", list_id=list_id) + "#share")
 
 
 if __name__ == '__main__':

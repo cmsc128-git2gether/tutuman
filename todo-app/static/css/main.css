@@ -3,6 +3,7 @@
 
 @import "base.css";
 @import "style.css";
+@import "shared.css";
 
 @view-transition {
     navigation: auto;

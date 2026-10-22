@@ -1193,7 +1193,7 @@
     background-color: var(--background);
     background-image: radial-gradient(60rem 28rem at 50% -10%, rgba(var(--accent-rgb), 0.07), transparent 70%);
 
-    /* ---------- Top bar ---------- */
+    /* ---------- top bar ---------- */
     .nav-header {
         display: flex;
         justify-content: space-between;
@@ -1298,23 +1298,7 @@
         padding: 1.5rem var(--spacing-lg) 2rem;
     }
 
-    .message {
-        padding: var(--spacing-md);
-        border-radius: 8px;
-        font-size: 13px;
 
-        &.error {
-            background-color: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--high-priority);
-            color: var(--high-priority);
-        }
-
-        &.success {
-            background-color: rgba(16, 185, 129, 0.1);
-            border: 1px solid var(--low-priority);
-            color: var(--low-priority);
-        }
-    }
 
     .visually-hidden {
         position: absolute;
@@ -1691,4 +1675,139 @@
     .profile-page .info-grid {
         grid-template-columns: 1fr;
     }
+}
+
+.shared-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.list-empty {
+    opacity: 0.5;
+    font-size: 0.8rem;
+}
+
+.new-list-form {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.new-list-form[hidden] {
+    display: none;
+}
+
+.header-meta {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    margin: 2px 0 6px;
+}
+
+.avatar-row {
+    display: flex;
+}
+
+.avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 2px solid #fff;
+}
+
+.share-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.6);
+    place-items: center;
+}
+
+.share-overlay.open {
+    display: grid;
+}
+
+.share-modal {
+    width: min(520px, 92vw);
+}
+
+.share-sub {
+    font-size: 0.85rem;
+    opacity: 0.6;
+    margin-top: 4px;
+}
+
+.share-form {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.share-form input {
+    flex: 1;
+}
+
+.share-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin: 20px 0 10px;
+}
+
+.share-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.share-person {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.share-info {
+    flex: 1;
+}
+
+.share-name {
+    font-weight: 600;
+}
+
+.share-email {
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+.share-role {
+    font-size: 0.8rem;
+    opacity: 0.5;
+}
+
+.avatar-lg {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: none;
+    font-size: 0.85rem;
+}
+
+.share-flash {
+    font-size: 0.85rem;
+    margin: -8px 0 12px;
+}
+
+.share-flash.error {
+    color: #f87171;
+}
+
+.share-flash.success {
+    color: #4ade80;
 }

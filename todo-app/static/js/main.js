@@ -487,14 +487,33 @@ if (newListBtn) {
 }
 
 // listener for invite modal 
+// listener for invite modal
 const shareModal = document.getElementById('shareModal');
 const inviteBtn = document.getElementById('inviteBtn');
 
 if (shareModal) {
-    inviteBtn?.addEventListener('click', () => shareModal.classList.add('open'));
-    document.getElementById('closeShareModal')
-        .addEventListener('click', () => shareModal.classList.remove('open'));
+    const closeShare = () => {
+        shareModal.classList.remove('show');
+        shareModal.querySelectorAll('.share-flash').forEach(el => el.remove());
+        history.replaceState(null, '', location.pathname + location.search);
+    };
+
+    inviteBtn?.addEventListener('click', () => shareModal.classList.add('show'));
+    document.getElementById('closeShareModal')?.addEventListener('click', closeShare);
     shareModal.addEventListener('click', e => {
-        if (e.target === shareModal) shareModal.classList.remove('open');
+        if (e.target === shareModal) closeShare();
     });
+
+    if (location.hash === '#share') shareModal.classList.add('show');
 }
+
+function closeShare() {
+    shareModal.classList.remove('show');
+    shareModal.querySelectorAll('.share-flash').forEach(el => el.remove());
+    history.replaceState(null, '', location.pathname + location.search);
+}
+
+document.getElementById('closeShareModal').addEventListener('click', closeShare);
+shareModal.addEventListener('click', e => {
+    if (e.target === shareModal) closeShare();
+});

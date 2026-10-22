@@ -475,7 +475,6 @@
 
 
     <!-- modal for invite collaborator -->
-
     {% if not current_list.is_personal %}
     <div class="share-overlay" id="shareModal">
         <div class="task-modal share-modal">
@@ -488,6 +487,12 @@
                     <i class="bi bi-x"></i>
                 </button>
             </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, msg in messages %}
+            <p class="message {{ category }}">{{ msg }}</p>
+            {% endfor %}
+            {% endwith %}
 
             {% if is_owner %}
             <form method="POST" action="{{ url_for('add_list_member', list_id=current_list.id) }}" class="share-form">
