@@ -1,0 +1,180 @@
+    /* --------- error messages pop up --------- */
+    .message {
+        margin-bottom: var(--spacing-lg);
+        padding: var(--spacing-md);
+        border-radius: 8px;
+        font-size: 13px;
+
+        &.error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--high-priority);
+            color: var(--high-priority);
+        }
+
+        &.success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--low-priority);
+            color: var(--low-priority);
+        }
+    }
+
+    .share-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 15, 20, 0.55);
+        backdrop-filter: blur(2px);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+
+        &.show {
+            display: flex;
+        }
+
+        .task-modal {
+            width: 550px;
+            animation: modal-pop 0.18s ease-out;
+
+            .modal-header {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                padding-bottom: 16px;
+                margin-bottom: 20px;
+                border-bottom: 1px solid var(--border);
+
+                h2 {
+                    font-size: 1.15rem;
+                    font-weight: 600;
+                    margin: 0;
+                }
+
+                .share-sub {
+                    margin: 4px 0 0;
+                    font-size: 13px;
+                    letter-spacing: 0.05em;
+                    color: var(--secondary-text);
+                }
+
+                .modal-close {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 32px;
+                    height: 32px;
+                    border: none;
+                    background: transparent;
+                    border-radius: 8px;
+                    color: var(--secondary-text);
+                    font-size: 1.1rem;
+                    cursor: pointer;
+                    transition: background 0.15s ease, color 0.15s ease;
+
+                    &:hover {
+                        background: rgba(255, 255, 255, 0.06);
+                        color: inherit;
+                    }
+                }
+            }
+
+            .share-form {
+                display: flex;
+                gap: 10px;
+                padding-bottom: 20px;
+                margin-bottom: 20px;
+                border-bottom: 1px solid var(--border);
+
+                input[type="email"] {
+                    flex: 1;
+                    min-width: 0;
+                    padding: 10px 14px;
+                    border: 1px solid var(--border);
+                    border-radius: 10px;
+                    background: transparent;
+                    color: inherit;
+                    font-size: 13px;
+                    outline: none;
+                    transition: border-color 0.15s ease;
+
+                    &::placeholder {
+                        font-family: 'DM Sans', system-ui, sans-serif;
+                        color: var(--placeholder-text);
+                    }
+
+                    &:focus {
+                        border-color: #5b7cfa;
+                    }
+                }
+
+                .add-task-btn {
+                    padding: 10px 18px;
+                    border-radius: 8px;
+                    border: none;
+                    background: var(--accent);
+                    color: #fff;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: background 0.15s ease;
+
+                    &:hover {
+                        background: #1d4ed8;
+                    }
+                }
+
+                .share-label {
+                    margin: 0 0 12px;
+                    font-family: 'Roboto Mono', monospace;
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.08em;
+                    color: var(--secondary-text);
+                }
+
+                .share-list {
+                    list-style: none;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                .share-person {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 8px 0;
+                }
+
+                .share-info {
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                .share-name {
+                    margin: 0;
+                    font-weight: 600;
+                }
+
+                .share-email {
+                    margin: 2px 0 0;
+
+                    font-size: 12px;
+                    color: var(--secondary-text);
+                }
+
+                .share-role {
+                    font-size: 0.8rem;
+                    color: var(--secondary-text);
+                }
+
+                .avatar-lg {
+                    width: 40px;
+                    height: 40px;
+                    border: none;
+                    border-radius: 10px;
+                    font-size: 0.85rem;
+                }
+            }
+        }
+    }

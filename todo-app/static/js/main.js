@@ -475,3 +475,41 @@ window.addEventListener('pageshow', (event) => {
         window.location.reload();
     }
 });
+
+// listener for creating shared lists 
+const newListForm = document.getElementById("newListForm");
+if (newListForm) {
+    const newListBtn = document.getElementById("newListBtn");
+    ['newListBtn', 'emptyNewListBtn'].forEach(id => {
+        document.getElementById(id)?.addEventListener('click', () => {
+            newListForm.hidden = false;
+            newListForm.querySelector('input').focus();
+        });
+    });
+}
+
+// listener for invite modal 
+const shareModal = document.getElementById('shareModal');
+const inviteBtn = document.getElementById('inviteBtn');
+
+if (shareModal) {
+    inviteBtn?.addEventListener('click', () => shareModal.classList.add('open'))
+    shareModal.addEventListener('click', e => {
+        if (e.target === shareModal) shareModal.classList.remove('open');
+    });
+
+    if (shareModal && location.hash === '#share') {
+        shareModal.classList.add('open');
+    }
+}
+
+function closeShare() {
+    shareModal.classList.remove('show');
+    shareModal.querySelectorAll('.share-flash').forEach(el => el.remove());
+    history.replaceState(null, '', location.pathname + location.search);
+}
+
+document.getElementById('closeShareModal').addEventListener('click', closeShare);
+shareModal.addEventListener('click', e => {
+    if (e.target === shareModal) closeShare();
+});

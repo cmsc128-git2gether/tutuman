@@ -198,13 +198,52 @@
             border-bottom: 1px solid var(--border);
 
             .header-title {
-                justify-content: center;
+                display: grid;
+                grid-template-columns: auto 1fr;
+                align-items: center;
+                column-gap: 14px;
+                row-gap: 6px;
 
-                p {
-                    font-size: 20px;
+
+                .list-title {
+                    grid-column: 1 / -1;
+                    margin: 0;
+                    font-size: 1.25rem;
                     font-weight: 600;
-                    color: var(--primary-text);
+                }
+
+                .header-meta {
+                    margin: 0;
+                    font-family: 'Roboto Mono', monospace;
+                    font-size: 11px;
+                    letter-spacing: 0.05em;
+                    text-transform: uppercase;
+                    color: var(--placeholder-text);
+                    white-space: nowrap;
+                }
+
+                .avatar-row {
+                    display: flex;
                     align-items: center;
+                    gap: var(--spacing-xs, 6px);
+                }
+
+                .avatar {
+                    display: grid;
+                    place-items: center;
+                    flex-shrink: 0;
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 8px;
+                    color: #fff;
+                    font-size: 12px;
+                    font-weight: 600;
+                    cursor: default;
+                    transition: transform 0.15s ease;
+
+                    &:hover {
+                        transform: translateY(-1px);
+                    }
                 }
             }
 
@@ -1193,7 +1232,7 @@
     background-color: var(--background);
     background-image: radial-gradient(60rem 28rem at 50% -10%, rgba(var(--accent-rgb), 0.07), transparent 70%);
 
-    /* ---------- Top bar ---------- */
+    /* ---------- top bar ---------- */
     .nav-header {
         display: flex;
         justify-content: space-between;
@@ -1298,23 +1337,7 @@
         padding: 1.5rem var(--spacing-lg) 2rem;
     }
 
-    .message {
-        padding: var(--spacing-md);
-        border-radius: 8px;
-        font-size: 13px;
 
-        &.error {
-            background-color: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--high-priority);
-            color: var(--high-priority);
-        }
-
-        &.success {
-            background-color: rgba(16, 185, 129, 0.1);
-            border: 1px solid var(--low-priority);
-            color: var(--low-priority);
-        }
-    }
 
     .visually-hidden {
         position: absolute;
@@ -1690,5 +1713,84 @@
 
     .profile-page .info-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+.shared-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.new-list-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid rgba(var(--accent-rgb), 0.35);
+    border-radius: 8px;
+    background-color: rgba(var(--accent-rgb), 0.1);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+
+    &:hover {
+        background-color: rgba(var(--accent-rgb), 0.18);
+    }
+
+    &:active {
+        transform: scale(0.97);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+    }
+}
+
+.new-list-form {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin: var(--spacing-sm) 0;
+
+    &[hidden] {
+        display: none;
+    }
+
+    input[type="text"] {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+    }
+
+    .add-task-btn {
+        flex-shrink: 0;
+        min-height: 36px;
+        padding: 0 14px;
+        border: none;
+        border-radius: 8px;
+        background-color: var(--accent);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: filter 0.15s ease, transform 0.15s ease;
+
+        &:hover {
+            filter: brightness(1.1);
+        }
+
+        &:active {
+            transform: scale(0.97);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
     }
 }

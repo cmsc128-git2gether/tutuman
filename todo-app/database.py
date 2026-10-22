@@ -60,7 +60,7 @@ def init_db():
 
 
 # Adding a task
-def add_task(user_id, list_id, title, due_date, due_time, priority, tag):
+def add_task(user_id, list_id, title, due_date=None, due_time=None, priority=None, tag=None):
     conn = get_db_connection()
 
     if conn is None:
@@ -68,22 +68,26 @@ def add_task(user_id, list_id, title, due_date, due_time, priority, tag):
 
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        INSERT INTO tasks
-        (user_id, list_id, title, due_date, due_time, priority, tag)
-        SELECT %s, %s, %s, %s, %s, %s, %s
-        FROM list_members
-        WHERE list_id = %s and user_id = %s
-        """,
-        (user_id, list_id, title, due_date, due_time, priority, tag, list_id, user_id)
-    )
+    try:
+        cursor.execute(
+            """
+            INSERT INTO tasks
+                (user_id, list_id, title, due_date, due_time, priority, tag)
+            SELECT %s, %s, %s, %s, %s, %s, %s
+            FROM list_members
+            WHERE list_id = %s and user_id = %s
+            """,
+            (user_id, list_id, title, due_date, due_time, priority, tag, list_id, user_id)
+        )
 
-    conn.commit()
-    task_id = cursor.lastrowid if cursor.rowcount == 1 else None   # None = not a member
-    cursor.close()
-    conn.close()
-    return task_id
+        conn.commit()
+        task_id = cursor.lastrowid if cursor.rowcount == 1 else None   # None = not a member
+        return task_id
+    
+    finally:
+        cursor.close()
+        conn.close()
+    
 
 
 # Returns one single task based on task_id
@@ -378,13 +382,14 @@ def find_user_for_invite(value):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        "SELECT id, email, username, display_name FROM users WHERE email = %s OR username = %s",
-        (value, value)
+        "SELECT id, email, display_name FROM users WHERE email = %s",
+        (value,)
     )
     user = cursor.fetchone()
     cursor.close()
     conn.close()
     return user
+
 
 # fetches every list current user belongs to 
 def get_lists_for_user(user_id):
@@ -530,8 +535,7 @@ def get_task_stats(list_id, user_id):
     conn.close()
     return stats
 
-# stats across every list the user belongs to (for the profile page)
-def get_user_task_stats(user_id):
+def get_profile_task_stats(user_id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(

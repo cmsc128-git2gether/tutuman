@@ -39,6 +39,9 @@ from database import (
     find_user_for_invite,
     get_user_task_stats,
     remove_member
+    get_profile_task_stats,
+    add_member,
+    find_user_for_invite,
 )
 
 load_dotenv()
@@ -220,6 +223,8 @@ def index():
         user=user,
         current_list=current_list,
     )
+    personal, _ = get_lists_for_user(session["user_id"])
+    return redirect(url_for("show_list", list_id=personal[0]["id"]))
 
 # For adding tasks
 @app.route('/add', methods=['POST'])
@@ -242,11 +247,15 @@ def add():
     priority = request.form.get('priority') or None
     tag = request.form.get('tag') or None
 
-    if add_task(uid, list_id, title, due_date, due_time, priority, tag) is None:
-        abort(404)
+    if list_id is None:
+        abort(400)
+    
+    task_id = add_task(uid, list_id, title, due_date, due_time, priority, tag)
+    if task_id is None:
+        abort(404)  # not a member of this list
 
-    return redirect(url_for('index'))
-
+    return redirect(url_for('show_list', list_id=list_id))
+   
 # For completing tasks
 @app.route('/complete/<int:task_id>', methods=['POST'])
 @login_required
@@ -404,7 +413,7 @@ def profile():
     if user is None:
         session.clear()
         return redirect(url_for("login"))
-    stats = get_user_task_stats(user["id"])
+    stats = get_profile_task_stats(session["user_id"])
     return render_template('profile.html', user=user, stats=stats)
 
 # Edit profile updates the display name submitted from the profile form.
@@ -481,11 +490,14 @@ def logout():
     return redirect(url_for("login"))
 
 # This route currently clears the session and behaves like a logout endpoint
-# @app.route('/edit_profile', methods=['POST'])
-# def login_required():
-#     session.clear()
-#     flash("You have been logged out.", "success")
-#     return redirect(url_for("login"))
+@app.route('/edit_profile', methods=['POST'])
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return wrapper
 
 # Accept an email and send a reset link if an account exists
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -561,25 +573,141 @@ def show_list(list_id):
 
     if not is_member(list_id, uid):
         abort(404)
-
+        
+    # Retrieve data for personal and shared lists
     current_list = get_list_details(list_id)
     personal, shared = get_lists_for_user(uid)
+    
+    personal_list = personal[0] if isinstance(personal, list) and personal else personal
+
+    is_shared = current_list.get('is_shared', False) or (
+        personal_list and current_list['id'] != personal_list['id']
+    )
+    
+    # URL Filters (Force tab='all' for shared lists)
+    tab = 'all' if is_shared else request.args.get('tab', 'all')
+    view_mode = request.args.get('view', 'list')
+    priority_filter = request.args.get('priority', '')
+    tag_filter = request.args.get('tag', '')
+
+   
+    
+    for s in shared:
+        s_id = s['id'] if isinstance(s, dict) else s.id
+        s_open = len([t for t in get_all_tasks(uid, s_id) if t['completed'] in (0, False)])
+        if isinstance(s, dict):
+            s['open_count'] = s_open
+        else:
+            s.open_count = s_open
+            
     tasks = get_all_tasks(uid, list_id)
     members = get_members(list_id)
-    stats = get_task_stats(list_id, uid)
+    stats = get_task_stats(uid, list_id)
+    
+    stats = {
+            "total": len(tasks),
+            "open": len([t for t in tasks if t['completed'] in (0, False)]),
+            "done": len([t for t in tasks if t['completed'] in (1, True)]),
+        }
+    
+    if personal_list and personal_list['id'] != list_id:
+        personal_stats = get_task_stats(uid, personal_list['id'])
+    else:
+        personal_stats = stats
 
+    # Apply priority & tag filters
+    if priority_filter:
+        tasks = [t for t in tasks if t.get('priority') == priority_filter]
+
+    if tag_filter:
+        tasks = [t for t in tasks if t.get('tag') == tag_filter]
+
+
+    # Split into open and done
+    open_tasks = [t for t in tasks if t['completed'] == 0]
+    done_tasks = [t for t in tasks if t['completed'] == 1]
+
+    # Respect tab selection ('ongoing', 'completed', 'all')
+    if tab == 'ongoing':
+        done_tasks = []
+    elif tab == 'completed':
+        open_tasks = []
+        
+    # Group open tasks by due date
+    today = datetime.now().date()
+
+    today_tasks = []
+    upcoming_tasks = []
+    no_due_date_tasks = []
+
+    for t in open_tasks:
+        if not t['due_date']:
+            no_due_date_tasks.append(t)
+            continue
+
+        due = t['due_date']
+
+        if isinstance(due, str):
+            due = datetime.strptime(due, "%Y-%m-%d").date()
+
+        if due <= today:
+            today_tasks.append(t)
+        else:
+            upcoming_tasks.append(t)
+
+    grouped_open = []
+    if today_tasks:
+        grouped_open.append(("Today", today_tasks))
+    if no_due_date_tasks:
+        grouped_open.append(("No Due Date", no_due_date_tasks))
+    if upcoming_tasks:
+        grouped_open.append(("Upcoming", upcoming_tasks))
+
+    # Week range for calendar view
+    def fmt(d):
+        return d.strftime("%b %d").replace(" 0", " ")
+
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    date_range = f"{fmt(start_of_week)} - {fmt(end_of_week)}, {end_of_week.year}"
+    
     return render_template(
         "index.html",
         current_list=current_list,
+        personal_list=personal_list,
         personal=personal,
         shared=shared,
         tasks=tasks,
         members=members,
         stats=stats,
         is_owner=(current_list["owner_id"] == uid),
+        user=get_user_by_id(uid),
+        tab=tab,
+        view_mode=view_mode,
+        priority_filter=priority_filter,
+        tag_filter=tag_filter,
+        grouped_open=grouped_open,
+        done_tasks=done_tasks,
+        total_count=stats["total"],
+        open_count=stats["open"],
+        done_count=stats["done"],
+        personal_total_count=personal_stats["total"],
+        personal_open_count=personal_stats["open"],
+        personal_done_count=personal_stats["done"],
+        date_range=date_range,
     )
     
 # app.py: add find_user_for_invite and add_member to the database imports
+@app.template_filter('avatar_color')
+def avatar_color(user_id):
+    hue = (int(user_id) * 137) % 360   # 137 spreads neighboring ids apart
+    return f"hsl({hue}, 55%, 45%)"
+
+@app.template_filter('initials')
+def initials(name):
+    parts = (name or '?').split()
+    return ''.join(p[0] for p in parts[:2]).upper()
+
 @app.route("/lists/<int:list_id>/members", methods=["POST"])
 @login_required
 def add_list_member(list_id):
@@ -630,6 +758,31 @@ def remove_list_member(list_id, member_id):
         flash("That user isn't a member of this list.", "error")
 
     return redirect(url_for("show_list", list_id=list_id))
+    lst = get_list_details(list_id)
+    if lst is None or not is_member(list_id, uid):
+        abort(404)
+    if lst["owner_id"] != uid:
+        abort(403)                       # members can see the list but can't invite
+    if lst["is_personal"]:
+        abort(400)                       # personal lists can't be shared
+
+    value = request.form.get("user", "").strip()
+    if not value:
+        flash("Enter a username or email.")
+        return redirect(url_for("show_list", list_id=list_id))
+
+    target = find_user_for_invite(value)
+    if target is None:
+        flash("No user found.", "error")
+    elif target["id"] == uid:
+        flash("You're already the owner of this list.", "error")
+    elif add_member(list_id, target["id"]):
+        flash(f"{target['display_name']} added.", "success")
+    else:
+        flash("That user is already a member.", "error")
+
+    return redirect(url_for("show_list", list_id=list_id) + "#share")
+
 
 if __name__ == '__main__':
     app.run(debug=True)   
