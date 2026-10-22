@@ -34,6 +34,8 @@ from database import (
     is_member,
     get_list_details,
     get_members,
+    get_all_tasks,
+    get_profile_task_stats,
 )
 
 load_dotenv()
@@ -100,140 +102,29 @@ def format_time(time_value):
 @app.route('/tasks')
 @login_required
 def index():
-    tab = request.args.get('tab', 'all')
-    view_mode = request.args.get('view', 'list')
-    priority_filter = request.args.get('priority', '')
-    tag_filter = request.args.get('tag', '')
-    user = get_user_by_id(session["user_id"])
-    user_id = session["user_id"]
-    
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    cursor.execute("SELECT * FROM tasks WHERE user_id = %s AND deleted = 0",
-        (user_id,)
-    )
-    
-    all_tasks = cursor.fetchall()
-    total_count = len(all_tasks)
-    open_count = sum(1 for t in all_tasks if t['completed'] == 0)
-    done_count = sum(1 for t in all_tasks if t['completed'] == 1)
-
-    query = 'SELECT * FROM tasks WHERE user_id = %s AND deleted = 0'
-    params = [user_id]
-    
-    if tab == 'ongoing':
-        query += ' AND completed = 0'
-    elif tab == 'completed':
-        query += ' AND completed = 1'
-    
-    if priority_filter:
-        query += ' AND priority = %s'
-        params.append(priority_filter)
-
-    if tag_filter:
-        query += ' AND tag = %s'
-        params.append(tag_filter)
-        
-    # Displays tasks in a specific order
-    query += ''' 
-        ORDER BY
-            due_date ASC,
-            CASE priority
-                WHEN 'High' THEN 1
-                WHEN 'Med' THEN 2
-                WHEN 'Low' THEN 3
-            END ASC,
-            due_date ASC,
-            due_time ASC
-    '''
-    cursor.execute(query, params)
-    tasks = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    today = datetime.now().date()
-    
-    # For pedning and completed tasks
-    open_tasks = [t for t in tasks if t['completed'] == 0]
-    done_tasks = [t for t in tasks if t['completed'] == 1]
-
-    today_tasks = []
-    upcoming_tasks = []
-    no_due_date_tasks = []
-
-    for t in open_tasks:
-        if not t['due_date']:
-            no_due_date_tasks.append(t)
-            continue
-
-        due = t['due_date']
-
-        if isinstance(due, str):
-            due = datetime.strptime(due, "%Y-%m-%d").date()
-            
-        if due <= today:
-            # overdue tasks are folded into "Today" so nothing open silently disappears
-            today_tasks.append(t)
-        else:
-            upcoming_tasks.append(t)
-
-    # Only include non-empty groups, keeps template logic simple
-    grouped_open = []
-    if today_tasks:
-        grouped_open.append(("Today", today_tasks))
-    if no_due_date_tasks:
-        grouped_open.append(("No Due Date", no_due_date_tasks))
-    if upcoming_tasks:
-        grouped_open.append(("Upcoming", upcoming_tasks))
-
-    # Week-Date Range
-    def fmt(d):
-        return d.strftime("%b %d").replace(" 0", " ")
-
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    date_range = f"{fmt(start_of_week)} - {end_of_week.day}, {end_of_week.year}"
-
-    # Direct to index.html
-    return render_template(
-        'index.html',
-        grouped_open=grouped_open,
-        done_tasks=done_tasks,
-        today_tasks=today_tasks,
-        tab=tab,
-        view_mode=view_mode,
-        priority_filter=priority_filter,
-        tag_filter=tag_filter,
-        total_count=total_count,
-        open_count=open_count,
-        done_count=done_count,
-        date_range=date_range,
-        user=user,
-    )
+    personal, _ = get_lists_for_user(session["user_id"])
+    return redirect(url_for("show_list", list_id=personal[0]["id"]))
 
 # For adding tasks
 @app.route('/add', methods=['POST'])
 @login_required
 def add():
+    uid = session["user_id"]
+    list_id = request.form.get('list_id', type=int)
     title = request.form['title']
     due_date = request.form.get('due_date') or None
     due_time = request.form.get('due_time') or None
     priority = request.form.get('priority') or None
     tag = request.form.get('tag') or None
 
+    if list_id is None:
+        abort(400)
     
-    add_task(
-        session["user_id"],
-        title,
-        due_date,
-        due_time, 
-        priority,
-        tag
-    )
-    
-    return redirect(url_for('index'))
+    task_id = add_task(uid, list_id, title, due_date, due_time, priority, tag)
+    if task_id is None:
+        abort(404)  # not a member of this list
+
+    return redirect(url_for('show_list', list_id=list_id))
    
 # For completing tasks
 @app.route('/complete/<int:task_id>', methods=['POST'])
@@ -379,7 +270,7 @@ def profile():
     if user is None:
         session.clear()
         return redirect(url_for("login"))
-    stats = get_task_stats(user["id"])
+    stats = get_profile_task_stats(session["user_id"])
     return render_template('profile.html', user=user, stats=stats)
 
 # Edit profile updates the display name submitted from the profile form.
@@ -457,10 +348,13 @@ def logout():
 
 # This route currently clears the session and behaves like a logout endpoint
 @app.route('/edit_profile', methods=['POST'])
-def login_required():
-    session.clear()
-    flash("You have been logged out.", "success")
-    return redirect(url_for("login"))
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return wrapper
 
 # Accept an email and send a reset link if an account exists
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -536,22 +430,128 @@ def show_list(list_id):
 
     if not is_member(list_id, uid):
         abort(404)
-
+        
+    # Retrieve data for personal and shared lists
     current_list = get_list_details(list_id)
     personal, shared = get_lists_for_user(uid)
+    
+    personal_list = personal[0] if isinstance(personal, list) and personal else personal
+
+    is_shared = current_list.get('is_shared', False) or (
+        personal_list and current_list['id'] != personal_list['id']
+    )
+    
+    # URL Filters (Force tab='all' for shared lists)
+    tab = 'all' if is_shared else request.args.get('tab', 'all')
+    view_mode = request.args.get('view', 'list')
+    priority_filter = request.args.get('priority', '')
+    tag_filter = request.args.get('tag', '')
+
+   
+    
+    for s in shared:
+        s_id = s['id'] if isinstance(s, dict) else s.id
+        s_open = len([t for t in get_all_tasks(uid, s_id) if t['completed'] in (0, False)])
+        if isinstance(s, dict):
+            s['open_count'] = s_open
+        else:
+            s.open_count = s_open
+            
     tasks = get_all_tasks(uid, list_id)
     members = get_members(list_id)
     stats = get_task_stats(uid, list_id)
+    
+    stats = {
+            "total": len(tasks),
+            "open": len([t for t in tasks if t['completed'] in (0, False)]),
+            "done": len([t for t in tasks if t['completed'] in (1, True)]),
+        }
+    
+    if personal_list and personal_list['id'] != list_id:
+        personal_stats = get_task_stats(uid, personal_list['id'])
+    else:
+        personal_stats = stats
 
+    # Apply priority & tag filters
+    if priority_filter:
+        tasks = [t for t in tasks if t.get('priority') == priority_filter]
+
+    if tag_filter:
+        tasks = [t for t in tasks if t.get('tag') == tag_filter]
+
+
+    # Split into open and done
+    open_tasks = [t for t in tasks if t['completed'] == 0]
+    done_tasks = [t for t in tasks if t['completed'] == 1]
+
+    # Respect tab selection ('ongoing', 'completed', 'all')
+    if tab == 'ongoing':
+        done_tasks = []
+    elif tab == 'completed':
+        open_tasks = []
+        
+    # Group open tasks by due date
+    today = datetime.now().date()
+
+    today_tasks = []
+    upcoming_tasks = []
+    no_due_date_tasks = []
+
+    for t in open_tasks:
+        if not t['due_date']:
+            no_due_date_tasks.append(t)
+            continue
+
+        due = t['due_date']
+
+        if isinstance(due, str):
+            due = datetime.strptime(due, "%Y-%m-%d").date()
+
+        if due <= today:
+            today_tasks.append(t)
+        else:
+            upcoming_tasks.append(t)
+
+    grouped_open = []
+    if today_tasks:
+        grouped_open.append(("Today", today_tasks))
+    if no_due_date_tasks:
+        grouped_open.append(("No Due Date", no_due_date_tasks))
+    if upcoming_tasks:
+        grouped_open.append(("Upcoming", upcoming_tasks))
+
+    # Week range for calendar view
+    def fmt(d):
+        return d.strftime("%b %d").replace(" 0", " ")
+
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    date_range = f"{fmt(start_of_week)} - {fmt(end_of_week)}, {end_of_week.year}"
+    
     return render_template(
         "index.html",
         current_list=current_list,
+        personal_list=personal_list,
         personal=personal,
         shared=shared,
         tasks=tasks,
         members=members,
         stats=stats,
         is_owner=(current_list["owner_id"] == uid),
+        user=get_user_by_id(uid),
+        tab=tab,
+        view_mode=view_mode,
+        priority_filter=priority_filter,
+        tag_filter=tag_filter,
+        grouped_open=grouped_open,
+        done_tasks=done_tasks,
+        total_count=stats["total"],
+        open_count=stats["open"],
+        done_count=stats["done"],
+        personal_total_count=personal_stats["total"],
+        personal_open_count=personal_stats["open"],
+        personal_done_count=personal_stats["done"],
+        date_range=date_range,
     )
 if __name__ == '__main__':
     app.run(debug=True)   
