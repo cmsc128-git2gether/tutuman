@@ -72,8 +72,8 @@ def add_task(user_id, list_id, title, due_date, due_time, priority, tag):
         """
         INSERT INTO tasks
         (user_id, list_id, title, due_date, due_time, priority, tag)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        from list_members
+        SELECT %s, %s, %s, %s, %s, %s, %s
+        FROM list_members
         WHERE list_id = %s and user_id = %s
         """,
         (user_id, list_id, title, due_date, due_time, priority, tag, list_id, user_id)
@@ -125,10 +125,10 @@ def get_all_tasks(user_id, list_id):
         SELECT t.*
         FROM tasks t
         JOIN list_members m ON m.list_id = t.list_id
-        WHERE t.user_id = %sAND m.user_id = %s AND t.deleted = 0
+        WHERE t.list_id = %s AND m.user_id = %s AND t.deleted = 0
         ORDER BY t.due_date, t.due_time
         """,
-        (list_id,user_id)
+        (list_id, user_id)
     )
 
     tasks = cursor.fetchall()
@@ -516,14 +516,36 @@ def get_task_stats(list_id, user_id):
         """
         SELECT
             COUNT(*) AS total,
-            COALESCE(SUM(completed = 1), 0) AS done,
-            COALESCE(SUM(completed = 0), 0) AS open,
-            COALESCE(SUM(completed = 0 AND due_date < CURDATE()), 0) AS overdue
+            COALESCE(SUM(t.completed = 1), 0) AS done,
+            COALESCE(SUM(t.completed = 0), 0) AS open,
+            COALESCE(SUM(t.completed = 0 AND t.due_date < CURDATE()), 0) AS overdue
         FROM tasks t
         JOIN list_members m ON m.list_id = t.list_id
         WHERE t.list_id = %s AND m.user_id = %s AND t.deleted = 0
         """,
         (list_id, user_id)
+    )
+    stats = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return stats
+
+# stats across every list the user belongs to (for the profile page)
+def get_user_task_stats(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        """
+        SELECT
+            COUNT(*) AS total,
+            COALESCE(SUM(t.completed = 1), 0) AS done,
+            COALESCE(SUM(t.completed = 0), 0) AS open,
+            COALESCE(SUM(t.completed = 0 AND t.due_date < CURDATE()), 0) AS overdue
+        FROM tasks t
+        JOIN list_members m ON m.list_id = t.list_id
+        WHERE m.user_id = %s AND t.deleted = 0
+        """,
+        (user_id,)
     )
     stats = cursor.fetchone()
     cursor.close()
