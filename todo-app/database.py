@@ -161,7 +161,7 @@ def update_task(task_id, user_id, title, due_date, due_time, priority, tag):
             t.due_time = %s,
             t.priority = %s,
             t.tag = %s
-        WHERE t.id = %s AND t.user_id = %s
+        WHERE t.id = %s AND m.user_id = %s
         """,
         (title, due_date, due_time, priority, tag, task_id, user_id)
     )
@@ -185,19 +185,18 @@ def delete_task(task_id, user_id):
 
     cursor.execute(
         """UPDATE tasks t
-        JOIN list_members m ON m.list_id = t.list_id
+        JOIN lists 1 ON 1.id = t.list_id
         SET t.deleted = 1 
-        WHERE t.id = %s AND t.user_id = %s""",
+        WHERE t.id = %s AND 1.owner_id = %s""",
         (task_id, user_id,)
     )
-
+    
     conn.commit()
     changed = cursor.rowcount > 0
-    
     cursor.close()
     conn.close()
     return changed
-
+    
 def restore_task(task_id, user_id):
     conn = get_db_connection()
     if conn is None:
@@ -208,7 +207,7 @@ def restore_task(task_id, user_id):
         UPDATE tasks t
         JOIN list_members m ON m.list_id = t.list_id
         SET t.deleted = 0 
-        WHERE t.id = %s AND t.user_id = %s""",
+        WHERE t.id = %s AND m.user_id = %s""",
         (task_id, user_id)
     )
     conn.commit()
@@ -235,7 +234,7 @@ def toggle_task(task_id, user_id):
             WHEN t.completed = 0 THEN 1
             ELSE 0
         END
-        WHERE t.id = %s AND t.user_id = %s
+        WHERE t.id = %s AND m.user_id = %s
         """,
         (task_id, user_id)
     )
@@ -436,14 +435,25 @@ def is_member(list_id, user_id):
         conn.close()
         
 # adds member to list; ignores if already on list
-def add_member(list_id, user_id):
+def add_member(list_id, owner_id, user_id):
     conn = get_db_connection()
+    
+    if conn is None:
+        return False
+    
     cursor = conn.cursor()
 
     try:
         cursor.execute(
-            "INSERT IGNORE INTO list_members (list_id, user_id) VALUES (%s, %s)",
-            (list_id, user_id)
+            """
+            INSERT IGNORE INTO list_members (list_id, user_id)
+            SELECT 1.id, %s
+            FROM lists 1
+            WHERE 1.id = %s
+                AND 1.owner_id=%s
+                AND 1.is_personal=0
+            """,
+            (user_id, list_id, owner_id)
         )
         conn.commit()
         return cursor.rowcount == 1    # true = added, false = already a member
@@ -521,14 +531,36 @@ def get_task_stats(list_id, user_id):
         """
         SELECT
             COUNT(*) AS total,
-            COALESCE(SUM(completed = 1), 0) AS done,
-            COALESCE(SUM(completed = 0), 0) AS open,
-            COALESCE(SUM(completed = 0 AND due_date < CURDATE()), 0) AS overdue
+            COALESCE(SUM(t.completed = 1), 0) AS done,
+            COALESCE(SUM(t.completed = 0), 0) AS open,
+            COALESCE(SUM(t.completed = 0 AND t.due_date < CURDATE()), 0) AS overdue
         FROM tasks t
         JOIN list_members m ON m.list_id = t.list_id
         WHERE t.list_id = %s AND m.user_id = %s AND t.deleted = 0
         """,
         (list_id, user_id)
+    )
+    stats = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return stats
+
+# stats across every list the user belongs to (for the profile page)
+def get_user_task_stats(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        """
+        SELECT
+            COUNT(*) AS total,
+            COALESCE(SUM(t.completed = 1), 0) AS done,
+            COALESCE(SUM(t.completed = 0), 0) AS open,
+            COALESCE(SUM(t.completed = 0 AND t.due_date < CURDATE()), 0) AS overdue
+        FROM tasks t
+        JOIN list_members m ON m.list_id = t.list_id
+        WHERE m.user_id = %s AND t.deleted = 0
+        """,
+        (user_id,)
     )
     stats = cursor.fetchone()
     cursor.close()

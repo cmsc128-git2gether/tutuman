@@ -18,8 +18,8 @@ CREATE TABLE lists (
     owner_id INT NOT NULL, 
     is_personal TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
-)
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+);
 
 CREATE TABLE list_members (
     list_id INT NOT NULL,

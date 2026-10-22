@@ -319,6 +319,7 @@
             </div>
 
             <form action="{{ url_for('add') }}" method="POST">
+                <input type="hidden" name="list_id" value="{{ current_list.id }}">
 
                 <div class="form-group">
                     <label for="title">Task</label>
