@@ -485,3 +485,16 @@ if (newListBtn) {
         if (!form.hidden) form.querySelector("input").focus();
     });
 }
+
+// listener for invite modal 
+const shareModal = document.getElementById('shareModal');
+const inviteBtn = document.getElementById('inviteBtn');
+
+if (shareModal) {
+    inviteBtn?.addEventListener('click', () => shareModal.classList.add('open'));
+    document.getElementById('closeShareModal')
+        .addEventListener('click', () => shareModal.classList.remove('open'));
+    shareModal.addEventListener('click', e => {
+        if (e.target === shareModal) shareModal.classList.remove('open');
+    });
+}

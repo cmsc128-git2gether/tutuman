@@ -130,6 +130,11 @@
                 </div>
 
                 <div class="header-actions">
+                    {% if is_owner and not current_list.is_personal %}
+                    <button class="filter-btn" type="button" id="inviteBtn">
+                        <i class="bi bi-person-plus"></i> Invite
+                    </button>
+                    {% endif %}
 
                     <div class="filter-wrapper">
                         <button class="filter-btn" type="button" id="filterBtn">
@@ -184,7 +189,7 @@
                     </div>
 
                     <button class="new-task-btn" type="button" id="newTaskBtn">
-                        <i class="bi bi-plus"></i> New Task
+                        <i class="bi bi-plus-square"></i> New Task
                     </button>
                 </div>
             </header>
@@ -469,7 +474,45 @@
     </div>
 
 
+    <!-- modal for invite collaborator -->
 
+    {% if not current_list.is_personal %}
+    <div class="share-overlay" id="shareModal">
+        <div class="task-modal share-modal">
+            <div class="modal-header">
+                <div>
+                    <h2>Share “{{ current_list.name }}”</h2>
+                    <p class="share-sub">Invite people to add and complete tasks</p>
+                </div>
+                <button type="button" class="modal-close" id="closeShareModal">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+
+            {% if is_owner %}
+            <form method="POST" action="{{ url_for('add_list_member', list_id=current_list.id) }}" class="share-form">
+                <input type="email" name="user" placeholder="teammate@example.com" required>
+                <button type="submit" class="add-task-btn">Send invite</button>
+            </form>
+            {% endif %}
+
+            <p class="share-label">People with access</p>
+            <ul class="share-list">
+                {% for m in members %}
+                <li class="share-person">
+                    <span class="avatar avatar-lg" style="background: {{ m.id | avatar_color }}">{{ m.display_name |
+                        initials }}</span>
+                    <div class="share-info">
+                        <p class="share-name">{{ m.display_name }}{{ ' (you)' if m.id == user.id }}</p>
+                        <p class="share-email">{{ m.email }}</p>
+                    </div>
+                    <span class="share-role">{{ 'Owner' if m.is_owner else 'Can edit' }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
 </body>
 
 </html>
