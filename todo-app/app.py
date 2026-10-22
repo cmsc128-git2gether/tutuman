@@ -206,24 +206,12 @@ def index():
     end_of_week = start_of_week + timedelta(days=6)
     date_range = f"{fmt(start_of_week)} - {end_of_week.day}, {end_of_week.year}"
 
-    # Direct to index.html
-    # return render_template(
-    #     'index.html',
-    #     grouped_open=grouped_open,
-    #     done_tasks=done_tasks,
-    #     today_tasks=today_tasks,
-    #     tab=tab,
-    #     view_mode=view_mode,
-    #     priority_filter=priority_filter,
-    #     tag_filter=tag_filter,
-    #     total_count=total_count,
-    #     open_count=open_count,
-    #     done_count=done_count,
-    #     date_range=date_range,
-    #     user=user,
-    #     current_list=current_list,
-    # )
+
     personal, _ = get_lists_for_user(session["user_id"])
+    
+    if not personal:
+        abort(404)
+        
     return redirect(url_for("show_list", list_id=personal[0]["id"]))
 
 # For adding tasks
@@ -260,31 +248,57 @@ def add():
 @app.route('/complete/<int:task_id>', methods=['POST'])
 @login_required
 def toggle(task_id):
-    task = get_task(task_id, session["user_id"])
+    uid = session["user_id"]
+    task = get_task(task_id, uid)
+
     if task is None:
         abort(404)
-    toggle_task(task_id, session["user_id"],) 
-    
-    # change destination later
-    return redirect(url_for('show_list', list_id=task["list_id"]))
+
+    if not toggle_task(task_id, uid):
+        abort(404)
+
+    return redirect(url_for("show_list", list_id=task["list_id"]))
+
 
 # For deleting tasks
 @app.route('/delete/<int:task_id>', methods=['DELETE'])
 @login_required
 def delete(task_id):
-    if get_task(task_id, session["user_id"]) is None:
+    uid = session["user_id"]
+    task = get_task(task_id, uid)
+
+    if task is None:
         abort(404)
-    delete_task(task_id, session["user_id"],)
-    return '', 204
+        
+    task_list = get_list_details(task["list_id"])
+    if task_list is None:
+        abort(404)
+        
+    # Only the owner of this list can delete its tasks.
+    if task_list["owner_id"] != uid:
+        abort(403)
+        
+    if not delete_task(task_id, uid):
+        abort(404)
+
+    return "", 204
+
 
 # For restoring deleted tasks
 @app.route('/restore/<int:task_id>', methods=['POST'])
 @login_required
 def restore(task_id):
-    if get_task(task_id, session["user_id"]) is None:
+    uid = session["user_id"]
+    task = get_task(task_id, uid)
+
+    if task is None:
         abort(404)
-    restore_task(task_id, session["user_id"])
-    return '', 204
+
+    if not restore_task(task_id, uid):
+        abort(404)
+
+    return "", 204
+
 
 # For editing task and updating values of edited tasks
 @app.route('/edit/<int:task_id>', methods=['POST'])
@@ -300,7 +314,7 @@ def update(task_id):
     priority = request.form.get('priority') or None
     tag = request.form.get('tag') or None
     
-    update_task(
+    if not update_task(
         task_id,
         session["user_id"],
         title,
@@ -308,7 +322,8 @@ def update(task_id):
         due_time,
         priority,
         tag
-    )
+    ):
+        abort(404)
     
     # change destination later
     return redirect(url_for('show_list', list_id=task["list_id"]))
@@ -730,7 +745,7 @@ def add_list_member(list_id):
         flash("No user found with that email or username.", "error")
     elif invitee["id"] == uid:
         flash("You're already in this list.", "error")
-    elif not add_member(list_id, invitee["id"]):
+    elif not add_member(list_id, uid, invitee["id"]):
         flash(f"{invitee['display_name']} is already a member.", "error")
     else:
         flash(f"{invitee['display_name']} was added to the list.", "success")
