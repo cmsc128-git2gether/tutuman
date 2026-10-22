@@ -53,8 +53,8 @@
             <nav class="view-menu">
                 <p class="view-title shared-title">
                     Shared
-                    <button type="button" class="icon-btn" id="newListBtn" aria-label="New shared list">
-                        <i class="bi bi-plus"></i>
+                    <button type="button" class="new-list-btn" id="newListBtn" aria-label="New shared list">
+                        <i class="bi bi-plus"></i> New
                     </button>
                 </p>
 
@@ -65,7 +65,9 @@
                     <p class="view-value">{{ l.open_count }}</p>
                 </a>
                 {% else %}
-                <p class="view-name list-empty">No shared lists yet</p>
+                <button type="button" class="empty-cta" id="emptyNewListBtn">
+                    <i class="bi bi-people"></i>
+                    <span>Create your first shared list</span> </button>
                 {% endfor %}
 
                 <form method="POST" action="{{ url_for('create_list_route') }}" id="newListForm" class="new-list-form"
@@ -113,7 +115,8 @@
             <!-- header section -->
             <header class="content-header">
                 <div class="header-title">
-                    <p>{{ current_list.name }}</p>
+
+                    <p class="list-title">{{ current_list.name }}</p>
                     <p class="header-meta">
                         {{ members | length }} collaborator{{ '' if members | length == 1 else 's' }}
                         · {{ open_count }} open

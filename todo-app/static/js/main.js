@@ -477,34 +477,30 @@ window.addEventListener('pageshow', (event) => {
 });
 
 // listener for creating shared lists 
-const newListBtn = document.getElementById("newListBtn");
-if (newListBtn) {
-    newListBtn.addEventListener("click", () => {
-        const form = document.getElementById("newListForm");
-        form.hidden = !form.hidden;
-        if (!form.hidden) form.querySelector("input").focus();
+const newListForm = document.getElementById("newListForm");
+if (newListForm) {
+    const newListBtn = document.getElementById("newListBtn");
+    ['newListBtn', 'emptyNewListBtn'].forEach(id => {
+        document.getElementById(id)?.addEventListener('click', () => {
+            newListForm.hidden = false;
+            newListForm.querySelector('input').focus();
+        });
     });
 }
 
 // listener for invite modal 
-// listener for invite modal
 const shareModal = document.getElementById('shareModal');
 const inviteBtn = document.getElementById('inviteBtn');
 
 if (shareModal) {
-    const closeShare = () => {
-        shareModal.classList.remove('show');
-        shareModal.querySelectorAll('.share-flash').forEach(el => el.remove());
-        history.replaceState(null, '', location.pathname + location.search);
-    };
-
-    inviteBtn?.addEventListener('click', () => shareModal.classList.add('show'));
-    document.getElementById('closeShareModal')?.addEventListener('click', closeShare);
+    inviteBtn?.addEventListener('click', () => shareModal.classList.add('open'))
     shareModal.addEventListener('click', e => {
-        if (e.target === shareModal) closeShare();
+        if (e.target === shareModal) shareModal.classList.remove('open');
     });
 
-    if (location.hash === '#share') shareModal.classList.add('show');
+    if (shareModal && location.hash === '#share') {
+        shareModal.classList.add('open');
+    }
 }
 
 function closeShare() {
