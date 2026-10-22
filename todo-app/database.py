@@ -60,7 +60,6 @@ def init_db():
 
 
 # Adding a task
-def add_task(user_id, list_id, title, due_date, due_time, priority, tag):
     conn = get_db_connection()
 
     if conn is None:
@@ -68,22 +67,26 @@ def add_task(user_id, list_id, title, due_date, due_time, priority, tag):
 
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        INSERT INTO tasks
-        (user_id, list_id, title, due_date, due_time, priority, tag)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        from list_members
-        WHERE list_id = %s and user_id = %s
-        """,
-        (user_id, list_id, title, due_date, due_time, priority, tag, list_id, user_id)
-    )
+    try:
+        cursor.execute(
+            """
+            INSERT INTO tasks
+                (user_id, list_id, title, due_date, due_time, priority, tag)
+            SELECT %s, %s, %s, %s, %s, %s, %s
+            FROM list_members
+            WHERE list_id = %s and user_id = %s
+            """,
+            (user_id, list_id, title, due_date, due_time, priority, tag, list_id, user_id)
+        )
 
-    conn.commit()
-    task_id = cursor.lastrowid if cursor.rowcount == 1 else None   # None = not a member
-    cursor.close()
-    conn.close()
-    return task_id
+        conn.commit()
+        task_id = cursor.lastrowid if cursor.rowcount == 1 else None   # None = not a member
+        return task_id
+    
+    finally:
+        cursor.close()
+        conn.close()
+    
 
 
 # Returns one single task based on task_id
