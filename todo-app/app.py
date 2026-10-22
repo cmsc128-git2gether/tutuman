@@ -38,10 +38,10 @@ from database import (
     add_member,
     find_user_for_invite,
     get_user_task_stats,
-    remove_member
+    remove_member,
     get_profile_task_stats,
     add_member,
-    find_user_for_invite,
+    find_user_for_invite
 )
 
 load_dotenv()
@@ -207,22 +207,22 @@ def index():
     date_range = f"{fmt(start_of_week)} - {end_of_week.day}, {end_of_week.year}"
 
     # Direct to index.html
-    return render_template(
-        'index.html',
-        grouped_open=grouped_open,
-        done_tasks=done_tasks,
-        today_tasks=today_tasks,
-        tab=tab,
-        view_mode=view_mode,
-        priority_filter=priority_filter,
-        tag_filter=tag_filter,
-        total_count=total_count,
-        open_count=open_count,
-        done_count=done_count,
-        date_range=date_range,
-        user=user,
-        current_list=current_list,
-    )
+    # return render_template(
+    #     'index.html',
+    #     grouped_open=grouped_open,
+    #     done_tasks=done_tasks,
+    #     today_tasks=today_tasks,
+    #     tab=tab,
+    #     view_mode=view_mode,
+    #     priority_filter=priority_filter,
+    #     tag_filter=tag_filter,
+    #     total_count=total_count,
+    #     open_count=open_count,
+    #     done_count=done_count,
+    #     date_range=date_range,
+    #     user=user,
+    #     current_list=current_list,
+    # )
     personal, _ = get_lists_for_user(session["user_id"])
     return redirect(url_for("show_list", list_id=personal[0]["id"]))
 
@@ -266,7 +266,7 @@ def toggle(task_id):
     toggle_task(task_id, session["user_id"],) 
     
     # change destination later
-    return redirect(url_for('index'))
+    return redirect(url_for('show_list', list_id=task["list_id"]))
 
 # For deleting tasks
 @app.route('/delete/<int:task_id>', methods=['DELETE'])
@@ -311,7 +311,7 @@ def update(task_id):
     )
     
     # change destination later
-    return redirect(url_for('index'))
+    return redirect(url_for('show_list', list_id=task["list_id"]))
 
 # --------- LAB 2 FUNCTIONS --------- #
 
@@ -321,7 +321,7 @@ MIN_PASSWORD_LENGTH = 8
 @app.route('/')
 def home():
     if "user_id" in session:
-        return redirect(url_for("profile"))
+        return redirect(url_for("lists"))
     return redirect(url_for("login"))
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -413,7 +413,7 @@ def profile():
     if user is None:
         session.clear()
         return redirect(url_for("login"))
-    stats = get_profile_task_stats(session["user_id"])
+    stats = get_user_task_stats(session["user_id"])
     return render_template('profile.html', user=user, stats=stats)
 
 # Edit profile updates the display name submitted from the profile form.
@@ -523,7 +523,7 @@ def reset_password(token):
     reset = get_valid_reset(token)
     if reset is None: 
         flash("Invalid or expired password reset link.", "error")
-        return redirect(url_for('forgot_pass'))
+        return redirect(url_for('forgot_password'))
     
     if request.method == 'GET':
         return render_template('reset_pass.html', token=token)
@@ -602,7 +602,6 @@ def show_list(list_id):
             
     tasks = get_all_tasks(uid, list_id)
     members = get_members(list_id)
-    stats = get_task_stats(uid, list_id)
     
     stats = {
             "total": len(tasks),
@@ -611,7 +610,7 @@ def show_list(list_id):
         }
     
     if personal_list and personal_list['id'] != list_id:
-        personal_stats = get_task_stats(uid, personal_list['id'])
+        personal_stats = get_task_stats(personal_list['id'], uid)
     else:
         personal_stats = stats
 
@@ -748,38 +747,18 @@ def remove_list_member(list_id, member_id):
 
     current_list = get_list_details(list_id)
     if current_list["owner_id"] != uid:
-        abort(403)
-
+        abort(403)      # members can see the list but can't invite
+    if current_list["is_personal"]:
+        abort(400)      # personal lists can't be shared
+    
+    
+    
     if member_id == uid:
         flash("The owner can't be removed from their own list.", "error")
     elif remove_member(list_id, uid, member_id):
         flash("Member removed.", "success")
     else:
         flash("That user isn't a member of this list.", "error")
-
-    return redirect(url_for("show_list", list_id=list_id))
-    lst = get_list_details(list_id)
-    if lst is None or not is_member(list_id, uid):
-        abort(404)
-    if lst["owner_id"] != uid:
-        abort(403)                       # members can see the list but can't invite
-    if lst["is_personal"]:
-        abort(400)                       # personal lists can't be shared
-
-    value = request.form.get("user", "").strip()
-    if not value:
-        flash("Enter a username or email.")
-        return redirect(url_for("show_list", list_id=list_id))
-
-    target = find_user_for_invite(value)
-    if target is None:
-        flash("No user found.", "error")
-    elif target["id"] == uid:
-        flash("You're already the owner of this list.", "error")
-    elif add_member(list_id, target["id"]):
-        flash(f"{target['display_name']} added.", "success")
-    else:
-        flash("That user is already a member.", "error")
 
     return redirect(url_for("show_list", list_id=list_id) + "#share")
 
