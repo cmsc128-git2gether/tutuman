@@ -60,6 +60,7 @@ def init_db():
 
 
 # Adding a task
+def add_task(user_id, list_id, title, due_date=None, due_time=None, priority=None, tag=None):
     conn = get_db_connection()
 
     if conn is None:
