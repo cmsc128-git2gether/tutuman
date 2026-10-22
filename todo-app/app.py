@@ -37,7 +37,8 @@ from database import (
     get_all_tasks,
     add_member,
     find_user_for_invite,
-    get_user_task_stats
+    get_user_task_stats,
+    remove_member
 )
 
 load_dotenv()
@@ -608,6 +609,27 @@ def add_list_member(list_id):
         flash(f"{invitee['display_name']} was added to the list.", "success")
 
     return redirect(url_for("show_list", list_id=list_id)) 
-    
+
+@app.route("/lists/<int:list_id>/members/<int:member_id>/remove", methods=["POST"])
+@login_required
+def remove_list_member(list_id, member_id):
+    uid = session["user_id"]
+
+    if not is_member(list_id, uid):
+        abort(404)
+
+    current_list = get_list_details(list_id)
+    if current_list["owner_id"] != uid:
+        abort(403)
+
+    if member_id == uid:
+        flash("The owner can't be removed from their own list.", "error")
+    elif remove_member(list_id, uid, member_id):
+        flash("Member removed.", "success")
+    else:
+        flash("That user isn't a member of this list.", "error")
+
+    return redirect(url_for("show_list", list_id=list_id))
+
 if __name__ == '__main__':
     app.run(debug=True)   
