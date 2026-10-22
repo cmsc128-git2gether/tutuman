@@ -553,5 +553,11 @@ def show_list(list_id):
         personal_done_count=personal_stats["done"],
         date_range=date_range,
     )
+    
+@app.template_filter('avatar_color')
+def avatar_color(user_id):
+    hue = (int(user_id) * 137) % 360   # 137 spreads neighboring ids apart
+    return f"hsl({hue}, 55%, 45%)"
+
 if __name__ == '__main__':
     app.run(debug=True)   
