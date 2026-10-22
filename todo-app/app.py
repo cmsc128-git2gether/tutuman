@@ -242,28 +242,40 @@ def add():
 @app.route('/complete/<int:task_id>', methods=['POST'])
 @login_required
 def toggle(task_id):
+    task = get_task(task_id, session["user_id"])
+    if task is None:
+        abort(404)
     toggle_task(task_id, session["user_id"],) 
     
+    # change destination later
     return redirect(url_for('index'))
 
 # For deleting tasks
 @app.route('/delete/<int:task_id>', methods=['DELETE'])
 @login_required
 def delete(task_id):
+    if get_task(task_id, session["user_id"]) is None:
+        abort(404)
     delete_task(task_id, session["user_id"],)
     return '', 204
 
-# For deleting tasks
+# For restoring deleted tasks
 @app.route('/restore/<int:task_id>', methods=['POST'])
 @login_required
 def restore(task_id):
-    restore_task(task_id, session["user_id"],)
+    if get_task(task_id, session["user_id"]) is None:
+        abort(404)
+    restore_task(task_id, session["user_id"])
     return '', 204
 
 # For editing task and updating values of edited tasks
 @app.route('/edit/<int:task_id>', methods=['POST'])
 @login_required
 def update(task_id):
+    task = get_task(task_id, session["user_id"])
+    if task is None:
+        abort(404)
+        
     title = request.form['title']
     due_date = request.form.get('due_date') or None
     due_time = request.form.get('due_time') or None
@@ -280,6 +292,7 @@ def update(task_id):
         tag
     )
     
+    # change destination later
     return redirect(url_for('index'))
 
 # --------- LAB 2 FUNCTIONS --------- #
