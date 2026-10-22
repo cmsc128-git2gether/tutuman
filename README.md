@@ -161,8 +161,8 @@ Every query is scoped by the logged-in user's id from the session, never by an i
 
 | Role    | Determined by                    | Can                                        |
 | ------- | -------------------------------- | ------------------------------------------ |
-| Member  | row in `list_members`            | view the list, add and complete tasks      |
-| Owner   | `lists.owner_id` equals the user | invite and remove members, delete the list |
+| Member  | row in `list_members`            | view the list, add, edit, complete, and restore deleted tasks      |
+| Owner   | `lists.owner_id` equals the user | can do what members can do, invite and remove members, delete the list, and delete tasks in their lists |
 | Creator | `tasks.user_id` equals the user  | edit and delete that task                  |
 
 | Operation                                          | Ownership check                                                                            | On failure            |
@@ -208,6 +208,13 @@ def add_list_member(list_id):
 | POST      | `/profile/password` | Change the password (needs the current password)                              | Yes  |
 | POST      | `/profile/delete`   | Delete the account, its owned lists, and its tasks                            | Yes  |
 
+**Password Recovery**
+
+| Method | Route | Description | Auth |
+| --- | --- | --- | --- |
+| GET, POST | `/forgot-password` | Show the form and request a password reset link | No |
+| GET, POST | `/reset-password/<token>` | Verify the reset link and set a new password | No |
+
 **Lists** (all require login)
 
 | Method | Route                 | Description                                                     | Who      |
@@ -227,6 +234,9 @@ def add_list_member(list_id):
 | POST   | `/complete/<id>` | Toggle completed                             | Creator |
 | POST   | `/delete/<id>`   | Soft delete a task                           | Creator |
 | POST   | `/restore/<id>`  | Restore a soft-deleted task                  | Creator |
+
+**Task deletion rule**
+With collaboration, members can view, add, edit, complete, and restore tasks. Only the list owner can delete tasks. If a member tries to delete a task that they did not create, the request is rejected and the task remains unchanged.
 
 **How ownership is checked**
 
