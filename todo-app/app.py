@@ -36,7 +36,8 @@ from database import (
     get_members,
     get_all_tasks,
     add_member,
-    find_user_for_invite
+    find_user_for_invite,
+    get_user_task_stats
 )
 
 load_dotenv()
@@ -109,6 +110,8 @@ def index():
     tag_filter = request.args.get('tag', '')
     user = get_user_by_id(session["user_id"])
     user_id = session["user_id"]
+    personal, shared = get_lists_for_user(user_id)
+    current_list = personal[0]
     
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -214,30 +217,35 @@ def index():
         done_count=done_count,
         date_range=date_range,
         user=user,
+        current_list=current_list,
     )
 
 # For adding tasks
 @app.route('/add', methods=['POST'])
 @login_required
 def add():
-    title = request.form['title']
+    uid = session["user_id"]
+
+    list_id = request.form.get("list_id", type=int)
+    if list_id is None:
+        abort(400, description="missing or invalid list_id")
+    if not is_member(list_id, uid):
+        abort(404)
+
+    title = request.form.get('title', '').strip()
+    if not title:
+        abort(400, description="empty title")
+
     due_date = request.form.get('due_date') or None
     due_time = request.form.get('due_time') or None
     priority = request.form.get('priority') or None
     tag = request.form.get('tag') or None
 
-    
-    add_task(
-        session["user_id"],
-        title,
-        due_date,
-        due_time, 
-        priority,
-        tag
-    )
-    
+    if add_task(uid, list_id, title, due_date, due_time, priority, tag) is None:
+        abort(404)
+
     return redirect(url_for('index'))
-   
+
 # For completing tasks
 @app.route('/complete/<int:task_id>', methods=['POST'])
 @login_required
@@ -395,7 +403,7 @@ def profile():
     if user is None:
         session.clear()
         return redirect(url_for("login"))
-    stats = get_task_stats(user["id"])
+    stats = get_user_task_stats(user["id"])
     return render_template('profile.html', user=user, stats=stats)
 
 # Edit profile updates the display name submitted from the profile form.
@@ -472,11 +480,11 @@ def logout():
     return redirect(url_for("login"))
 
 # This route currently clears the session and behaves like a logout endpoint
-@app.route('/edit_profile', methods=['POST'])
-def login_required():
-    session.clear()
-    flash("You have been logged out.", "success")
-    return redirect(url_for("login"))
+# @app.route('/edit_profile', methods=['POST'])
+# def login_required():
+#     session.clear()
+#     flash("You have been logged out.", "success")
+#     return redirect(url_for("login"))
 
 # Accept an email and send a reset link if an account exists
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -532,7 +540,7 @@ def reset_password(token):
 @login_required
 def lists():
     personal, _ = get_lists_for_user(session["user_id"])
-    return redirect(url_for("view_list", list_id=personal[0]["id"]))
+    return redirect(url_for("show_list", list_id=personal[0]["id"]))
 
 @app.route("/lists", methods=["POST"])
 @login_required
@@ -557,7 +565,7 @@ def show_list(list_id):
     personal, shared = get_lists_for_user(uid)
     tasks = get_all_tasks(uid, list_id)
     members = get_members(list_id)
-    stats = get_task_stats(uid, list_id)
+    stats = get_task_stats(list_id, uid)
 
     return render_template(
         "index.html",
@@ -583,7 +591,7 @@ def add_list_member(list_id):
     if current_list["owner_id"] != uid:
         abort(403)
 
-        value = request.form.get("identifier", "").strip()
+    value = request.form.get("identifier", "").strip()
     if not value:
         flash("Enter an email or username.", "error")
         return redirect(url_for("show_list", list_id=list_id))
