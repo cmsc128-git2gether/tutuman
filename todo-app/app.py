@@ -570,11 +570,21 @@ def add_list_member(list_id):
     if current_list["owner_id"] != uid:
         abort(403)
 
-    value = request.form.get("identifier", "").strip()
-    invitee = find_user_for_invite(value) if value else None
+        value = request.form.get("identifier", "").strip()
+    if not value:
+        flash("Enter an email or username.", "error")
+        return redirect(url_for("show_list", list_id=list_id))
 
-    if invitee is not None:
-        add_member(list_id, invitee["id"])
+    invitee = find_user_for_invite(value)
+
+    if invitee is None:
+        flash("No user found with that email or username.", "error")
+    elif invitee["id"] == uid:
+        flash("You're already in this list.", "error")
+    elif not add_member(list_id, invitee["id"]):
+        flash(f"{invitee['display_name']} is already a member.", "error")
+    else:
+        flash(f"{invitee['display_name']} was added to the list.", "success")
 
     return redirect(url_for("show_list", list_id=list_id)) 
     
