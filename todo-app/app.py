@@ -34,7 +34,9 @@ from database import (
     is_member,
     get_list_details,
     get_members,
-    get_all_tasks
+    get_all_tasks,
+    add_member,
+    find_user_for_invite
 )
 
 load_dotenv()
@@ -554,5 +556,27 @@ def show_list(list_id):
         stats=stats,
         is_owner=(current_list["owner_id"] == uid),
     )
+    
+# app.py: add find_user_for_invite and add_member to the database imports
+@app.route("/lists/<int:list_id>/members", methods=["POST"])
+@login_required
+def add_list_member(list_id):
+    uid = session["user_id"]
+
+    if not is_member(list_id, uid):
+        abort(404)
+
+    current_list = get_list_details(list_id)
+    if current_list["owner_id"] != uid:
+        abort(403)
+
+    value = request.form.get("identifier", "").strip()
+    invitee = find_user_for_invite(value) if value else None
+
+    if invitee is not None:
+        add_member(list_id, invitee["id"])
+
+    return redirect(url_for("show_list", list_id=list_id)) 
+    
 if __name__ == '__main__':
     app.run(debug=True)   
