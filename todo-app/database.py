@@ -535,6 +535,28 @@ def get_task_stats(list_id, user_id):
     conn.close()
     return stats
 
+# stats across every list the user belongs to (for the profile page)
+def get_user_task_stats(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        """
+        SELECT
+            COUNT(*) AS total,
+            COALESCE(SUM(t.completed = 1), 0) AS done,
+            COALESCE(SUM(t.completed = 0), 0) AS open,
+            COALESCE(SUM(t.completed = 0 AND t.due_date < CURDATE()), 0) AS overdue
+        FROM tasks t
+        JOIN list_members m ON m.list_id = t.list_id
+        WHERE m.user_id = %s AND t.deleted = 0
+        """,
+        (user_id,)
+    )
+    stats = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return stats
+
 def get_profile_task_stats(user_id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
