@@ -125,15 +125,6 @@ The connection settings (host `localhost`, user `root`, database `todo_app`) are
 
 ## Schema
 
-Users and tasks are stored in separate tables. Each task references its owner through `user_id`, so no user data is duplicated inside task records.
-
-```
-users (1) ────< tasks (many)
-  id  <──────── user_id (FK, ON DELETE CASCADE)
-```
-
-## Schema
-
 Users, lists and tasks are stored in separate tables. A list belongs to one owner, users join lists through a membership table, and each task references the list it lives in and the user who created it, so no user data is duplicated inside list or task records.
 
 ```

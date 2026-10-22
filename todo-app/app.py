@@ -504,16 +504,6 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for("login"))
 
-# This route currently clears the session and behaves like a logout endpoint
-@app.route('/edit_profile', methods=['POST'])
-def login_required(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if "user_id" not in session:
-            return redirect(url_for("login"))
-        return f(*args, **kwargs)
-    return wrapper
-
 # Accept an email and send a reset link if an account exists
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -734,15 +724,15 @@ def add_list_member(list_id):
     if current_list["owner_id"] != uid:
         abort(403)
 
-    value = request.form.get("identifier", "").strip()
+    value = request.form.get("user", "").strip().lower()
     if not value:
-        flash("Enter an email or username.", "error")
+        flash("Enter an email", "error")
         return redirect(url_for("show_list", list_id=list_id))
 
     invitee = find_user_for_invite(value)
 
     if invitee is None:
-        flash("No user found with that email or username.", "error")
+        flash("No user found with that email.", "error")
     elif invitee["id"] == uid:
         flash("You're already in this list.", "error")
     elif not add_member(list_id, uid, invitee["id"]):
@@ -750,7 +740,7 @@ def add_list_member(list_id):
     else:
         flash(f"{invitee['display_name']} was added to the list.", "success")
 
-    return redirect(url_for("show_list", list_id=list_id)) 
+    return redirect(url_for("show_list", list_id=list_id) + "#share") 
 
 @app.route("/lists/<int:list_id>/members/<int:member_id>/remove", methods=["POST"])
 @login_required

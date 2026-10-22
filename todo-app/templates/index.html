@@ -494,7 +494,7 @@
 
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% for category, msg in messages %}
-            <p class="message {{ category }}">{{ msg }}</p>
+            <p class="message share-flash {{ category }}">{{ msg }}</p>
             {% endfor %}
             {% endwith %}
 

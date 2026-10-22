@@ -185,9 +185,9 @@ def delete_task(task_id, user_id):
 
     cursor.execute(
         """UPDATE tasks t
-        JOIN lists 1 ON 1.id = t.list_id
+        JOIN lists l ON l.id = t.list_id
         SET t.deleted = 1 
-        WHERE t.id = %s AND 1.owner_id = %s""",
+        WHERE t.id = %s AND l.owner_id = %s""",
         (task_id, user_id,)
     )
     
@@ -447,11 +447,11 @@ def add_member(list_id, owner_id, user_id):
         cursor.execute(
             """
             INSERT IGNORE INTO list_members (list_id, user_id)
-            SELECT 1.id, %s
-            FROM lists 1
-            WHERE 1.id = %s
-                AND 1.owner_id=%s
-                AND 1.is_personal=0
+            SELECT l.id, %s
+            FROM lists l
+            WHERE l.id = %s
+                AND l.owner_id=%s
+                AND l.is_personal=0
             """,
             (user_id, list_id, owner_id)
         )
