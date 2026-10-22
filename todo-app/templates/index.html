@@ -25,25 +25,42 @@
                 <p class="app-name">Tutuman</p>
             </section>
 
+            <!-- personal lists are the only lists that have status filters -->
             <nav class="view-menu">
-                <p class="view-title">Lists</p>
-                {% for l in personal %}
-                <a href="{{ url_for('show_list', list_id=l.id) }}"
-                    class="{{ 'active' if l.id == current_list.id }} view-item">
-                    <p class="view-name">{{ l.name }}</p>
-                    <p class="view-value">{{ l.open_count }}</p>
-                </a>
-                {% endfor %}
+                <p class="view-title">Personal</p>
 
+                <a href="{{ url_for('show_list', list_id=personal_list.id, tab='all', view=view_mode) }}"
+                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'all' }} view-item">
+                    <p class="view-name">All</p>
+                    <p class="view-value" id="nav-total-count">{{ total_count if (not current_list or current_list.id ==
+                        personal_list.id) else personal_total_count }}</p>
+                </a>
+                <a href="{{ url_for('show_list', list_id=personal_list.id, tab='ongoing', view=view_mode) }}"
+                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'ongoing' }} view-item">
+                    <p class="view-name">Ongoing</p>
+                    <p class="view-value" id="nav-open-count">{{ open_count if (not current_list or current_list.id ==
+                        personal_list.id) else personal_open_count }}</p>
+                </a>
+                <a href="{{ url_for('show_list', list_id=personal_list.id, tab='completed', view=view_mode) }}"
+                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'completed' }} view-item">
+                    <p class="view-name">Completed</p>
+                    <p class="view-value" id="nav-done-count">{{ done_count if (not current_list or current_list.id ==
+                        personal_list.id) else personal_done_count }}</p>
+                </a>
+            </nav>
+
+            <!-- shared lists navigation -->
+            <nav class="view-menu">
                 <p class="view-title shared-title">
                     Shared
                     <button type="button" class="icon-btn" id="newListBtn" aria-label="New shared list">
                         <i class="bi bi-plus"></i>
                     </button>
                 </p>
+
                 {% for l in shared %}
-                <a href="{{ url_for('show_list', list_id=l.id) }}"
-                    class="{{ 'active' if l.id == current_list.id }} view-item">
+                <a href="{{ url_for('show_list', list_id=l.id, view=view_mode) }}"
+                    class="{{ 'active' if current_list and l.id == current_list.id }} view-item">
                     <p class="view-name">{{ l.name }}</p>
                     <p class="view-value">{{ l.open_count }}</p>
                 </a>
@@ -58,21 +75,22 @@
                 </form>
             </nav>
 
+            <!-- stats card section -->
             <section class="stats">
                 <section class="stat-layout">
                     <div class="stat-card">
                         <p class="stat-title">Total</p>
-                        <p class="stat-value">{{ total_count }}</p>
+                        <p class="stat-value" id="stat-total-count">{{ total_count }}</p>
                     </div>
 
                     <div class="stat-card">
                         <p class="stat-title">Open</p>
-                        <p class="stat-value">{{ open_count }}</p>
+                        <p class="stat-value" id="stat-open-count">{{ open_count }}</p>
                     </div>
 
                     <div class="stat-card">
                         <p class="stat-title">Done</p>
-                        <p class="stat-value">{{ done_count }}</p>
+                        <p class="stat-value" id="stat-done-count">{{ done_count }}</p>
                     </div>
                 </section>
 
@@ -96,6 +114,19 @@
             <header class="content-header">
                 <div class="header-title">
                     <p>{{ current_list.name }}</p>
+                    <p class="header-meta">
+                        {{ members | length }} collaborator{{ '' if members | length == 1 else 's' }}
+                        · {{ open_count }} open
+                    </p>
+
+                    <div class="avatar-row">
+                        {% for m in members %}
+                        <span class="avatar" style="background: {{ m.id | avatar_color }}"
+                            title="{{ m.display_name }}{{ ' (owner)' if m.is_owner }}">
+                            {{ (m.display_name or '?')[0] | upper }}
+                        </span>
+                        {% endfor %}
+                    </div>
                 </div>
 
                 <div class="header-actions">
