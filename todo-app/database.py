@@ -157,7 +157,7 @@ def update_task(task_id, user_id, title, due_date, due_time, priority, tag):
             t.due_time = %s,
             t.priority = %s,
             t.tag = %s
-        WHERE t.id = %s AND t.user_id = %s
+        WHERE t.id = %s AND m.user_id = %s
         """,
         (title, due_date, due_time, priority, tag, task_id, user_id)
     )
@@ -183,7 +183,7 @@ def delete_task(task_id, user_id):
         """UPDATE tasks t
         JOIN list_members m ON m.list_id = t.list_id
         SET t.deleted = 1 
-        WHERE t.id = %s AND t.user_id = %s""",
+        WHERE t.id = %s AND m.user_id = %s""",
         (task_id, user_id,)
     )
 
@@ -204,7 +204,7 @@ def restore_task(task_id, user_id):
         UPDATE tasks t
         JOIN list_members m ON m.list_id = t.list_id
         SET t.deleted = 0 
-        WHERE t.id = %s AND t.user_id = %s""",
+        WHERE t.id = %s AND m.user_id = %s""",
         (task_id, user_id)
     )
     conn.commit()
@@ -231,7 +231,7 @@ def toggle_task(task_id, user_id):
             WHEN t.completed = 0 THEN 1
             ELSE 0
         END
-        WHERE t.id = %s AND t.user_id = %s
+        WHERE t.id = %s AND m.user_id = %s
         """,
         (task_id, user_id)
     )
