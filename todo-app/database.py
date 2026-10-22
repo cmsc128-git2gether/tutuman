@@ -382,13 +382,14 @@ def find_user_for_invite(value):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        "SELECT id, email, username, display_name FROM users WHERE email = %s OR username = %s",
-        (value, value)
+        "SELECT id, email, display_name FROM users WHERE email = %s",
+        (value,)
     )
     user = cursor.fetchone()
     cursor.close()
     conn.close()
     return user
+
 
 # fetches every list current user belongs to 
 def get_lists_for_user(user_id):
