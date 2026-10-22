@@ -34,7 +34,6 @@ from database import (
     is_member,
     get_list_details,
     get_members,
-    get_all_tasks
 )
 
 load_dotenv()
