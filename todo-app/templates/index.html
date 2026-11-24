@@ -179,18 +179,6 @@
                             </form>
                         </div>
                     </div>
-
-                    <div class="view-toggle">
-                        <a href="{{ url_for('show_list', list_id=current_list.id, tab=tab, view='list') }}"
-                            class="{{ 'active' if view_mode == 'list' }}">
-                            <i class="bi bi-list-ul"></i> List
-                        </a>
-                        <a href="{{ url_for('show_list', list_id=current_list.id, tab=tab, view='calendar') }}"
-                            class="{{ 'active' if view_mode == 'calendar' }}">
-                            <i class="bi bi-calendar"></i> Calendar
-                        </a>
-                    </div>
-
                     <button class="new-task-btn" type="button" id="newTaskBtn">
                         <i class="bi bi-plus-square"></i> New Task
                     </button>
