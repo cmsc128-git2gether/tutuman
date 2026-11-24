@@ -1,4 +1,4 @@
-# app.py is the main Python file and runs Flask
+# ========== IMPORTS AND APP CONFIGRUATION ========== #
 import os
 import re
 import secrets
@@ -11,7 +11,33 @@ from mysql.connector import IntegrityError
 from mailer import send_reset_email
 
 from database import (
+    # database connection and stats functions
     get_db_connection,
+    get_task_stats,
+    get_user_task_stats,
+    
+    # users and authentication functions
+    create_user,
+    delete_user,
+    get_user_by_email,
+    get_user_by_id,
+    update_display_name,
+    update_password_hash,
+    create_reset_token,
+    get_valid_reset,
+    delete_reset_token,
+    
+    # lists and its members functions
+    add_member,
+    create_shared_list,
+    find_user_for_invite,
+    get_list_details,
+    get_lists_for_user,
+    is_member,
+    get_members,
+    remove_member,
+    
+    # tasks functions
     add_task,
     get_task,
     get_valid_reset,
@@ -19,29 +45,9 @@ from database import (
     delete_task,
     restore_task,
     toggle_task,
-    get_user_by_email,
-    get_user_by_id,
-    create_user,
-    update_display_name,
-    update_password_hash,
-    delete_user,
-    get_task_stats,
-    create_reset_token,
-    get_valid_reset,
-    delete_reset_token,
-    get_lists_for_user,
-    create_shared_list,
-    is_member,
-    get_list_details,
     get_members,
     get_all_tasks,
     add_member,
-    find_user_for_invite,
-    get_user_task_stats,
-    remove_member,
-    get_profile_task_stats,
-    add_member,
-    find_user_for_invite
 )
 
 load_dotenv()
