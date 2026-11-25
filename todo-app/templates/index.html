@@ -53,7 +53,7 @@
             <nav class="view-menu">
                 <p class="view-title shared-title">
                     Shared
-                    <button type="button" class="new-list-btn" id="newListBtn" aria-label="New shared list">
+                    <button type="button" class="btn btn-primary" id="newListBtn" aria-label="New shared list">
                         <i class="bi bi-plus"></i> New
                     </button>
                 </p>
@@ -73,7 +73,7 @@
                 <form method="POST" action="{{ url_for('create_list_route') }}" id="newListForm" class="new-list-form"
                     hidden>
                     <input type="text" name="name" maxlength="100" placeholder="List name" required>
-                    <button type="submit" class="add-task-btn">Create</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
                 </form>
             </nav>
 
@@ -134,13 +134,13 @@
 
                 <div class="header-actions">
                     {% if is_owner and not current_list.is_personal %}
-                    <button class="filter-btn" type="button" id="inviteBtn">
+                    <button class="btn btn-secondary" type="button" id="inviteBtn">
                         <i class="bi bi-person-plus"></i> Invite
                     </button>
                     {% endif %}
 
                     <div class="filter-wrapper">
-                        <button class="filter-btn" type="button" id="filterBtn">
+                        <button class="btn btn-secondary" type="button" id="filterBtn">
                             <i class="bi bi-filter"></i> Filter
                             {% if priority_filter or tag_filter %}<span class="filter-badge"></span>{% endif %}
                         </button>
@@ -150,7 +150,7 @@
                                 <input type="hidden" name="tab" value="{{ tab }}">
                                 <input type="hidden" name="view" value="{{ view_mode }}">
 
-                                <div class="form-group">
+                                <div class="field">
                                     <label for="filter-priority">Priority</label>
                                     <select id="filter-priority" name="priority">
                                         <option value="" {{ 'selected' if not priority_filter }}>All</option>
@@ -160,7 +160,7 @@
                                     </select>
                                 </div>
 
-                                <div class="form-group">
+                                <div class="field">
                                     <label for="filter-tag">Tag</label>
                                     <select id="filter-tag" name="tag">
                                         <option value="" {{ 'selected' if not tag_filter }}>All</option>
@@ -173,13 +173,14 @@
 
                                 <div class="filter-actions">
                                     <a href="{{ url_for('show_list', list_id=current_list.id, tab=tab, view=view_mode) }}"
-                                        class="cancel-btn">Clear</a>
-                                    <button type="submit" class="add-task-btn">Apply</button>
+                                        class="btn btn-secondary">Clear</a>
+                                    <button type="submit" class="btn btn-primary">Apply</button>
                                 </div>
                             </form>
                         </div>
                     </div>
-                    <button class="new-task-btn" type="button" id="newTaskBtn">
+
+                    <button class="btn btn-primary" type="button" id="newTaskBtn">
                         <i class="bi bi-plus-square"></i> New Task
                     </button>
                 </div>
@@ -297,11 +298,11 @@
 
     <!-- modal for add new task feature -->
     <div class="modal-overlay" id="taskModal">
-        <div class="task-modal">
+        <div class="task-modal modal-sm">
 
             <div class="modal-header">
                 <h2>New Task</h2>
-                <button type="button" class="modal-close" id="closeTaskModal">
+                <button type="button" class="icon-btn" id="closeTaskModal">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
@@ -309,7 +310,7 @@
             <form action="{{ url_for('add') }}" method="POST">
                 <input type="hidden" name="list_id" value="{{ current_list.id }}">
 
-                <div class="form-group">
+                <div class="field">
                     <label for="title">Task</label>
                     <input type="text" id="title" name="title" placeholder="What needs to be done?" required>
                     <input type="hidden" name="list_id" value="{{ current_list.id }}">
@@ -317,12 +318,12 @@
 
                 <div class="form-row">
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="due_date">Due Date</label>
                         <input type="date" id="due_date" name="due_date">
                     </div>
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="due_time">Due Time</label>
                         <input type="time" id="due_time" name="due_time">
                     </div>
@@ -330,7 +331,7 @@
 
                 <div class="form-row">
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="priority">Priority</label>
                         <select id="priority" name="priority">
                             <option value="Low">Low</option>
@@ -339,7 +340,7 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="tag">Tag</label>
                         <select id="tag" name="tag">
                             <option value="School">School</option>
@@ -350,11 +351,11 @@
                 </div>
 
                 <div class="modal-actions">
-                    <button type="button" class="cancel-btn" id="cancelTask">
+                    <button type="button" class="btn btn-secondary" id="cancelTask">
                         Cancel
                     </button>
 
-                    <button type="submit" class="add-task-btn">
+                    <button type="submit" class="btn btn-primary">
                         Add Task
                     </button>
                 </div>
@@ -366,31 +367,31 @@
 
     <!-- modal for edit task feature -->
     <div class="modal-overlay" id="editTaskModal">
-        <div class="task-modal">
+        <div class="task-modal modal-sm">
 
             <div class="modal-header">
                 <h2>Edit Task</h2>
 
-                <button type="button" class="modal-close close-btn" id="closeEditModal">
+                <button type="button" class="icon-btn close-btn" id="closeEditModal">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
 
             <form id="editTaskForm" method="POST">
 
-                <div class="form-group">
+                <div class="field">
                     <label for="edit-title">Task</label>
                     <input type="text" id="edit-title" name="title" required>
                 </div>
 
                 <div class="form-row">
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="edit-due_date">Due Date</label>
                         <input type="date" id="edit-due_date" name="due_date">
                     </div>
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="edit-due_time">Due Time</label>
                         <input type="time" id="edit-due_time" name="due_time">
                     </div>
@@ -398,7 +399,7 @@
 
                 <div class="form-row">
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="edit-priority">Priority</label>
 
                         <select id="edit-priority" name="priority">
@@ -408,7 +409,7 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="edit-tag">Tag</label>
 
                         <select id="edit-tag" name="tag">
@@ -422,11 +423,11 @@
 
                 <div class="modal-actions">
 
-                    <button type="button" class="cancel-btn" id="cancelEdit">
+                    <button type="button" class="btn btn-secondary" id="cancelEdit">
                         Cancel
                     </button>
 
-                    <button type="submit" class="add-task-btn">
+                    <button type="submit" class="btn btn-primary">
                         Save Changes
                     </button>
                 </div>
@@ -438,10 +439,10 @@
 
     <!-- modal for delete task dialog  -->
     <div class="modal-overlay" id="deleteConfirmModal">
-        <div class="task-modal">
+        <div class="task-modal modal-sm">
             <div class="modal-header">
                 <h2>Delete Task</h2>
-                <button type="button" class="modal-close" id="closeDeleteModal">
+                <button type="button" class="icon-btn" id="closeDeleteModal">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
@@ -449,10 +450,10 @@
             <p>Are you sure you want to delete this task?</p>
 
             <div class="modal-actions">
-                <button type="button" class="cancel-btn" id="cancel-delete-btn">
+                <button type="button" class="btn btn-secondary" id="cancel-delete-btn">
                     Cancel
                 </button>
-                <button type="button" class="add-task-btn danger" id="confirm-delete-btn">
+                <button type="button" class="btn btn-danger" id="confirm-delete-btn">
                     Delete
                 </button>
             </div>
@@ -468,14 +469,14 @@
 
     <!-- modal for invite collaborator -->
     {% if not current_list.is_personal %}
-    <div class="share-overlay" id="shareModal">
-        <div class="task-modal share-modal">
+    <div class="modal-overlay" id="shareModal">
+        <div class="task-modal modal-md">
             <div class="modal-header">
                 <div>
                     <h2>Share “{{ current_list.name }}”</h2>
                     <p class="share-sub">Invite people to add and complete tasks</p>
                 </div>
-                <button type="button" class="modal-close" id="closeShareModal">
+                <button type="button" class="icon-btn" id="closeShareModal">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
@@ -489,7 +490,7 @@
             {% if is_owner %}
             <form method="POST" action="{{ url_for('add_list_member', list_id=current_list.id) }}" class="share-form">
                 <input type="email" name="user" placeholder="teammate@example.com" required>
-                <button type="submit" class="add-task-btn">Send invite</button>
+                <button type="submit" class="btn btn-primary">Send invite</button>
             </form>
             {% endif %}
 
