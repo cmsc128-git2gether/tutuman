@@ -73,7 +73,7 @@
                 <form method="POST" action="{{ url_for('create_list_route') }}" id="newListForm" class="new-list-form"
                     hidden>
                     <input type="text" name="name" maxlength="100" placeholder="List name" required>
-                    <button type="submit" class="btn btn-primary">Create</button>
+                    <button type="submit" class="btn btn-primary" data-loading-text="Creating…">Create</button>
                 </form>
             </nav>
 
@@ -355,7 +355,7 @@
                         Cancel
                     </button>
 
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" data-loading-text="Adding…">
                         Add Task
                     </button>
                 </div>
@@ -427,7 +427,7 @@
                         Cancel
                     </button>
 
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" data-loading-text="Saving…">
                         Save Changes
                     </button>
                 </div>
@@ -447,7 +447,7 @@
                 </button>
             </div>
 
-            <p>Are you sure you want to delete this task?</p>
+            <p>Delete “<strong id="deleteTaskTitle"></strong>”? You can undo right after.</p>
 
             <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" id="cancel-delete-btn">
@@ -466,6 +466,15 @@
         <button type="button" id="undoBtn">Undo</button>
     </div>
 
+    <!-- status notification -->
+    <div class="toast" id="statusToast" role="status" aria-live="polite">
+        <span></span>
+    </div>
+
+    {% for category, msg in get_flashed_messages(with_categories=true, category_filter=["toast-success", "toast-error"])
+    %}
+    <div id="flashData" hidden data-message="{{ msg }}" data-type="{{ category.replace('toast-', '') }}"></div>
+    {% endfor %}
 
     <!-- modal for invite collaborator -->
     {% if not current_list.is_personal %}
@@ -481,7 +490,7 @@
                 </button>
             </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% with messages = get_flashed_messages(with_categories=true, category_filter=["success", "error"]) %}
             {% for category, msg in messages %}
             <p class="message share-flash {{ category }}">{{ msg }}</p>
             {% endfor %}
@@ -490,7 +499,7 @@
             {% if is_owner %}
             <form method="POST" action="{{ url_for('add_list_member', list_id=current_list.id) }}" class="share-form">
                 <input type="email" name="user" placeholder="teammate@example.com" required>
-                <button type="submit" class="btn btn-primary">Send invite</button>
+                <button type="submit" class="btn btn-primary" data-loading-text="Sending invite…">Send invite</button>
             </form>
             {% endif %}
 

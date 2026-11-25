@@ -356,113 +356,12 @@ def forgot_password():
 @app.route('/tasks')
 @login_required
 def index():
-    tab = request.args.get('tab', 'all')
-    view_mode = request.args.get('view', 'list')
-    priority_filter = request.args.get('priority', '')
-    tag_filter = request.args.get('tag', '')
-    user = get_user_by_id(session["user_id"])
-    user_id = session["user_id"]
-    personal, shared = get_lists_for_user(user_id)
-    current_list = personal[0]
-    
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    cursor.execute("SELECT * FROM tasks WHERE user_id = %s AND deleted = 0",
-        (user_id,)
-    )
-    
-    all_tasks = cursor.fetchall()
-    total_count = len(all_tasks)
-    open_count = sum(1 for t in all_tasks if t['completed'] == 0)
-    done_count = sum(1 for t in all_tasks if t['completed'] == 1)
-
-    query = 'SELECT * FROM tasks WHERE user_id = %s AND deleted = 0'
-    params = [user_id]
-    
-    if tab == 'ongoing':
-        query += ' AND completed = 0'
-    elif tab == 'completed':
-        query += ' AND completed = 1'
-    
-    if priority_filter:
-        query += ' AND priority = %s'
-        params.append(priority_filter)
-
-    if tag_filter:
-        query += ' AND tag = %s'
-        params.append(tag_filter)
-        
-    # Displays tasks in a specific order
-    query += ''' 
-        ORDER BY
-            due_date ASC,
-            CASE priority
-                WHEN 'High' THEN 1
-                WHEN 'Med' THEN 2
-                WHEN 'Low' THEN 3
-            END ASC,
-            due_date ASC,
-            due_time ASC
-    '''
-    cursor.execute(query, params)
-    tasks = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    today = datetime.now().date()
-    
-    # Filters pending and completed tasks
-    open_tasks = [t for t in tasks if t['completed'] == 0]
-    done_tasks = [t for t in tasks if t['completed'] == 1]
-
-    today_tasks = []
-    upcoming_tasks = []
-    no_due_date_tasks = []
-
-    for t in open_tasks:
-        if not t['due_date']:
-            no_due_date_tasks.append(t)
-            continue
-
-        due = t['due_date']
-
-        if isinstance(due, str):
-            due = datetime.strptime(due, "%Y-%m-%d").date()
-            
-        if due <= today:
-            # overdue tasks are folded into "Today" so nothing open silently disappears
-            today_tasks.append(t)
-        else:
-            upcoming_tasks.append(t)
-
-    # Only include non-empty groups, keeps template logic simple
-    grouped_open = []
-    if today_tasks:
-        grouped_open.append(("Today", today_tasks))
-    if no_due_date_tasks:
-        grouped_open.append(("No Due Date", no_due_date_tasks))
-    if upcoming_tasks:
-        grouped_open.append(("Upcoming", upcoming_tasks))
-
-    # Week-Date Range
-    def fmt(d):
-        return d.strftime("%b %d").replace(" 0", " ")
-
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    date_range = f"{fmt(start_of_week)} - {end_of_week.day}, {end_of_week.year}"
-
-
     personal, _ = get_lists_for_user(session["user_id"])
-    
+
     if not personal:
         abort(404)
-        
+
     return redirect(url_for("show_list", list_id=personal[0]["id"]))
-
-
 # calls function in database.py to return lists user belongs to
 @app.route("/lists")
 @login_required
@@ -479,6 +378,7 @@ def create_list_route():
         abort(400)
 
     list_id = create_shared_list(session["user_id"], name)
+    flash("List created.", "toast-success")
     return redirect(url_for("show_list", list_id=list_id))
 
 @app.route("/lists/<int:list_id>")
@@ -553,6 +453,7 @@ def show_list(list_id):
     today_tasks = []
     upcoming_tasks = []
     no_due_date_tasks = []
+    overdue_date_tasks = []
 
     for t in open_tasks:
         if not t['due_date']:
@@ -564,12 +465,16 @@ def show_list(list_id):
         if isinstance(due, str):
             due = datetime.strptime(due, "%Y-%m-%d").date()
 
-        if due <= today:
+        if due < today:
+            overdue_date_tasks.append(t)
+        elif due == today:
             today_tasks.append(t)
         else:
             upcoming_tasks.append(t)
 
     grouped_open = []
+    if overdue_date_tasks:
+        grouped_open.append(("Overdue", overdue_date_tasks))
     if today_tasks:
         grouped_open.append(("Today", today_tasks))
     if no_due_date_tasks:
@@ -696,6 +601,7 @@ def add():
     if task_id is None:
         abort(404)  # not a member of this list
 
+    flash("Task added.", "toast-success")
     return redirect(url_for('show_list', list_id=list_id))
    
 # For completing tasks
@@ -779,7 +685,7 @@ def update(task_id):
     ):
         abort(404)
     
-    # change destination later
+    flash("Task updated.", "toast-success")
     return redirect(url_for('show_list', list_id=task["list_id"]))
 
 # ========================== MAIN ENTRY POINT ========================== #
