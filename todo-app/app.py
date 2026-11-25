@@ -126,6 +126,19 @@ def initials(name):
     parts = (name or '?').split()
     return ''.join(p[0] for p in parts[:2]).upper()
 
+ERROR_MESSAGES = {
+    400: ("Bad request", "Something was wrong with that request."),
+    403: ("Access denied", "You don't have permission to do that."),
+    404: ("Page not found", "That page or list doesn't exist, or you're not a member of it."),
+}
+
+@app.errorhandler(400)
+@app.errorhandler(403)
+@app.errorhandler(404)
+def handle_error(e):
+    title, message = ERROR_MESSAGES[e.code]
+    return render_template("error.html", code=e.code, title=title, message=message), e.code
+
 # ========================== AUTHENTICATION AND PASSWORD RESET ========================== #
 
 @app.route('/')

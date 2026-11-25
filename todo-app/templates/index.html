@@ -292,6 +292,33 @@
                     {% endfor %}
                 </ul>
                 {% endif %}
+
+                {% if not grouped_open and not done_tasks %}
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+
+                    {% if priority_filter or tag_filter %}
+                    <p class="empty-title">No tasks match this filter</p>
+                    <a href="{{ url_for('show_list', list_id=current_list.id, tab=tab, view=view_mode) }}"
+                        class="btn btn-secondary">Clear filter</a>
+
+                    {% elif tab == 'completed' %}
+                    <p class="empty-title">Nothing completed yet</p>
+                    <p class="empty-sub">Finished tasks will show up here.</p>
+
+                    {% elif tab == 'ongoing' %}
+                    <p class="empty-title">All caught up</p>
+                    <p class="empty-sub">You have no open tasks.</p>
+
+                    {% else %}
+                    <p class="empty-title">No tasks yet</p>
+                    <p class="empty-sub">Add your first task to get started.</p>
+                    <button type="button" class="btn btn-primary" id="emptyNewTaskBtn">
+                        <i class="bi bi-plus-square"></i> New Task
+                    </button>
+                    {% endif %}
+                </div>
+                {% endif %}
             </section>
         </section>
     </section>

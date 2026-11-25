@@ -65,6 +65,8 @@ if (newTaskBtn) {
     newTaskBtn.addEventListener("click", openTaskModal);
 }
 
+document.getElementById("emptyNewTaskBtn")?.addEventListener("click", openTaskModal);
+
 if (closeTaskModal) {
     closeTaskModal.addEventListener("click", closeTaskModalView);
 }
