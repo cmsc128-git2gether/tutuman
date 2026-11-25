@@ -1,0 +1,349 @@
+/* ========================== TASK LIST ========================== */
+.scrollable {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+
+    .date-group-label.overdue,
+    .date-group-label.overdue span {
+        color: var(--high-priority);
+    }
+
+    .date-group-label,
+    .done-label {
+        padding: var(--spacing-sm) var(--spacing-xs);
+        margin-top: var(--spacing-md);
+        font-family: 'Roboto Mono', monospace;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--placeholder-text);
+
+        span {
+            color: var(--secondary-text);
+        }
+
+        &:first-child {
+            margin-top: 0;
+        }
+    }
+
+    .task-list {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        list-style: none;
+    }
+
+    .task-item {
+        list-style: none;
+    }
+
+    .complete-form {
+        display: flex;
+        align-items: center;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* ---------- Task row ---------- */
+    .task-row {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        min-height: 52px;
+        padding: var(--spacing-sm) var(--spacing-md);
+        border: 1.5px solid transparent;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+
+        &:hover {
+            background-color: rgba(var(--accent-rgb), 0.05);
+
+            .task-actions {
+                opacity: 1;
+            }
+        }
+    }
+
+    .task-check {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        margin: 0;
+        border: 2px solid var(--border);
+        border-radius: 50%;
+        background: transparent;
+        cursor: pointer;
+        -webkit-appearance: none;
+        appearance: none;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+
+        &:hover {
+            border-color: var(--accent);
+            background-color: rgba(var(--accent-rgb), 0.1);
+        }
+
+        /* completed state */
+        &.checked {
+            border-color: var(--low-priority);
+            background-color: var(--low-priority);
+            color: var(--cards);
+            font-size: 12px;
+
+            &:hover {
+                background-color: transparent;
+                color: var(--low-priority);
+            }
+        }
+    }
+
+    .task-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .task-title {
+        font-size: 14px;
+        color: var(--primary-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ---------- Tags ---------- */
+    .tags-row {
+        display: flex;
+        gap: 4px;
+    }
+
+    .tag {
+        padding: 2px 7px;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--primary-text);
+    }
+
+    .tag-school {
+        background-color: var(--school-tag);
+    }
+
+    .tag-personal {
+        background-color: var(--personal-tag);
+    }
+
+    .tag-others {
+        background-color: var(--others-tag);
+    }
+
+    .priority-tag {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background-color: var(--background);
+        border: 1px solid var(--border);
+
+        &::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        &.priority-low::before {
+            background-color: var(--low-priority);
+        }
+
+        &.priority-med::before {
+            background-color: var(--mid-priority);
+        }
+
+        &.priority-high::before {
+            background-color: var(--high-priority);
+        }
+    }
+
+    /* ---------- Due date ---------- */
+    .task-date {
+        font-size: 14px;
+        color: var(--primary-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .task-time {
+        font-size: 12px;
+        opacity: 0.7;
+    }
+
+    .task-due-date.overdue {
+        color: var(--high-priority);
+
+        .task-date,
+        .task-time {
+            color: var(--high-priority);
+            opacity: 1;
+        }
+    }
+
+    /* ---------- Edit / delete ---------- */
+    .task-actions {
+        display: flex;
+        gap: 2px;
+        flex-shrink: 0;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+
+        .icon-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+
+            &:hover {
+                background-color: var(--border);
+                color: var(--primary-text);
+            }
+        }
+
+        .delete-btn:hover {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--high-priority);
+        }
+    }
+
+    /* ---------- Done list ---------- */
+    .done-list .task-title {
+        text-decoration: line-through;
+        font-style: italic;
+    }
+}
+
+/* ========================== FILTER DROPDOWN ========================== */
+.filter-wrapper {
+    position: relative;
+
+    .btn {
+        position: relative;
+    }
+
+    .filter-badge {
+        position: absolute;
+        top: 2px;
+        right: -2px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #2563eb;
+    }
+
+    .filter-panel {
+        display: none;
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        width: 220px;
+        padding: 16px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+        z-index: 100;
+
+        &.show {
+            display: block;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+
+            label {
+                margin: 0;
+                font-size: 0.8rem;
+                font-weight: 500;
+                color: #4b5563;
+            }
+
+            select {
+                padding: 8px 10px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                font-size: 0.85rem;
+            }
+        }
+
+        .filter-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    }
+}
+
+/* ========================== EMPTY STATE ========================== */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 64px var(--spacing-lg);
+    text-align: center;
+    color: var(--secondary-text);
+
+    .bi {
+        font-size: 32px;
+        color: var(--placeholder-text);
+    }
+
+    .empty-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--primary-text);
+    }
+
+    .empty-sub {
+        margin-bottom: var(--spacing-sm);
+        font-size: 13px;
+    }
+}
+
+/* ========================== BREADCRUMBS ========================== */
+.breadcrumb {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--placeholder-text);
+
+    a {
+        color: var(--secondary-text);
+        text-decoration: none;
+
+        &:hover {
+            color: var(--primary-text);
+            text-decoration: underline;
+        }
+    }
+
+    .bi {
+        font-size: 10px;
+    }
+}

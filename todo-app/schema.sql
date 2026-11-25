@@ -1,6 +1,8 @@
 DROP TABLE IF EXISTS tasks;
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS list_members;
 DROP TABLE IF EXISTS password_resets;
+DROP TABLE IF EXISTS lists;
+DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -10,19 +12,37 @@ CREATE TABLE users (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE lists (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    owner_id INT NOT NULL, 
+    is_personal TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE list_members (
+    list_id INT NOT NULL,
+    user_id INT NOT NULL,
+    joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (list_id, user_id),
+    FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE password_resets (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     reset_token VARCHAR(255) NOT NULL UNIQUE,
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE tasks (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    user_id INT NOT NULL,       -- creator of shared list
+    list_id INT NOT NULL,       -- list where task is part of
     title VARCHAR(255) NOT NULL,
     due_date DATE,
     due_time TIME,
@@ -31,10 +51,10 @@ CREATE TABLE tasks (
     completed TINYINT NOT NULL DEFAULT 0,
     deleted TINYINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     CHECK (priority IN ('Low', 'Med', 'High')),
-    CHECK (tag IN ('School', 'Personal', 'Others'))
-
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    CHECK (tag IN ('School', 'Personal', 'Others')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE
 );
+
 

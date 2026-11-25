@@ -1,9 +1,10 @@
-# app.py is the main Python file and runs Flask
+# ========================== IMPORTS AND APP CONFIGRUATION ========================== #
 import os
 import re
 import secrets
+import hashlib
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,7 +12,33 @@ from mysql.connector import IntegrityError
 from mailer import send_reset_email
 
 from database import (
+    # database connection and stats functions
     get_db_connection,
+    get_task_stats,
+    get_user_task_stats,
+    
+    # users and authentication functions
+    create_user,
+    delete_user,
+    get_user_by_email,
+    get_user_by_id,
+    update_display_name,
+    update_password_hash,
+    create_reset_token,
+    get_valid_reset,
+    delete_reset_token,
+    
+    # lists and its members functions
+    add_member,
+    create_shared_list,
+    find_user_for_invite,
+    get_list_details,
+    get_lists_for_user,
+    is_member,
+    get_members,
+    remove_member,
+    
+    # tasks functions
     add_task,
     get_task,
     get_valid_reset,
@@ -19,30 +46,56 @@ from database import (
     delete_task,
     restore_task,
     toggle_task,
-    get_user_by_email,
-    get_user_by_id,
-    create_user,
-    update_display_name,
-    update_password_hash,
-    delete_user,
-    get_task_stats,
-    create_reset_token,
-    get_valid_reset,
-    delete_reset_token,
+    get_members,
+    get_all_tasks,
+    add_member,
 )
 
 load_dotenv()
+print("SMTP_HOST =", os.getenv("SMTP_HOST"))
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
 app.permanent_session_lifetime = timedelta(days=7)
 
-# checks if user is logged in 
+# constant definitions
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MIN_PASSWORD_LENGTH = 8
+
+# ========================== HOOKS AND TEMPLATE FILTERS ========================== #
+
+# prevents cached copy of pages from being displayed after logout
+@app.after_request
+def no_cache(response):
+    if request.endpoint != 'static':
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+# creates a short marker of the user's current password hash
+def password_version(password_hash):
+    return hashlib.sha256(password_hash.encode()).hexdigest()[:16]
+
+# checks if user is logged in and the session still matches the current password
+
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if "user_id" not in session:
+        uid = session.get("user_id")
+        
+        # not logged in: send to the login page
+        if uid is None:
             return redirect(url_for("login"))
+
+        user = get_user_by_id(uid)
+        
+        # account was deleted, or the password changed since this session
+        if user is None or session.get("pw_version") != password_version(user["password_hash"]):
+            session.clear()
+            flash("Please log in again.", "error")
+            return redirect(url_for("login"))
+
         return view(*args, **kwargs)
     return wrapped
 
@@ -57,7 +110,7 @@ def format_date(date_value):
 
     return date_value.strftime("%A, %b %d")
 
-# Time formatter
+# time formatter
 @app.template_filter('format_time')
 def format_time(time_value):
     if not time_value:
@@ -79,199 +132,41 @@ def format_time(time_value):
 
     return time_obj.strftime("%I:%M %p")
 
-# For the home interface
+# for avatar profile icon in shared list
+@app.template_filter('avatar_color')
+def avatar_color(user_id):
+    hue = (int(user_id) * 137) % 360   # 137 spreads neighboring ids apart
+    return f"hsl({hue}, 55%, 45%)"
 
-@app.route('/tasks')
-@login_required
-def index():
-    tab = request.args.get('tab', 'all')
-    view_mode = request.args.get('view', 'list')
-    priority_filter = request.args.get('priority', '')
-    tag_filter = request.args.get('tag', '')
-    user = get_user_by_id(session["user_id"])
-    user_id = session["user_id"]
-    
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+# show username initial on 
+@app.template_filter('initials')
+def initials(name):
+    parts = (name or '?').split()
+    return ''.join(p[0] for p in parts[:2]).upper()
 
-    cursor.execute("SELECT * FROM tasks WHERE user_id = %s AND deleted = 0",
-        (user_id,)
-    )
-    
-    all_tasks = cursor.fetchall()
-    total_count = len(all_tasks)
-    open_count = sum(1 for t in all_tasks if t['completed'] == 0)
-    done_count = sum(1 for t in all_tasks if t['completed'] == 1)
+ERROR_MESSAGES = {
+    400: ("Bad request", "Something was wrong with that request."),
+    403: ("Access denied", "You don't have permission to do that."),
+    404: ("Page not found", "That page or list doesn't exist, or you're not a member of it."),
+}
 
-    query = 'SELECT * FROM tasks WHERE user_id = %s AND deleted = 0'
-    params = [user_id]
-    
-    if tab == 'ongoing':
-        query += ' AND completed = 0'
-    elif tab == 'completed':
-        query += ' AND completed = 1'
-    
-    if priority_filter:
-        query += ' AND priority = %s'
-        params.append(priority_filter)
+@app.errorhandler(400)
+@app.errorhandler(403)
+@app.errorhandler(404)
+def handle_error(e):
+    title, message = ERROR_MESSAGES[e.code]
+    return render_template("error.html", code=e.code, title=title, message=message), e.code
 
-    if tag_filter:
-        query += ' AND tag = %s'
-        params.append(tag_filter)
-        
-    # Displays tasks in a specific order
-    query += ''' 
-        ORDER BY
-            due_date ASC,
-            CASE priority
-                WHEN 'High' THEN 1
-                WHEN 'Med' THEN 2
-                WHEN 'Low' THEN 3
-            END ASC,
-            due_date ASC,
-            due_time ASC
-    '''
-    cursor.execute(query, params)
-    tasks = cursor.fetchall()
+# ========================== AUTHENTICATION AND PASSWORD RESET ========================== #
+def password_fingerprint(password_hash):
+    return hashlib.sha256(password_hash.encode()).hexdigest()[:16]
 
-    cursor.close()
-    conn.close()
 
-    today = datetime.now().date()
-    
-    # For pedning and completed tasks
-    open_tasks = [t for t in tasks if t['completed'] == 0]
-    done_tasks = [t for t in tasks if t['completed'] == 1]
-
-    today_tasks = []
-    upcoming_tasks = []
-    no_due_date_tasks = []
-
-    for t in open_tasks:
-        if not t['due_date']:
-            no_due_date_tasks.append(t)
-            continue
-
-        due = t['due_date']
-
-        if isinstance(due, str):
-            due = datetime.strptime(due, "%Y-%m-%d").date()
-            
-        if due <= today:
-            # overdue tasks are folded into "Today" so nothing open silently disappears
-            today_tasks.append(t)
-        else:
-            upcoming_tasks.append(t)
-
-    # Only include non-empty groups, keeps template logic simple
-    grouped_open = []
-    if today_tasks:
-        grouped_open.append(("Today", today_tasks))
-    if no_due_date_tasks:
-        grouped_open.append(("No Due Date", no_due_date_tasks))
-    if upcoming_tasks:
-        grouped_open.append(("Upcoming", upcoming_tasks))
-
-    # Week-Date Range
-    def fmt(d):
-        return d.strftime("%b %d").replace(" 0", " ")
-
-    start_of_week = today - timedelta(days=today.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    date_range = f"{fmt(start_of_week)} - {end_of_week.day}, {end_of_week.year}"
-
-    # Direct to index.html
-    return render_template(
-        'index.html',
-        grouped_open=grouped_open,
-        done_tasks=done_tasks,
-        today_tasks=today_tasks,
-        tab=tab,
-        view_mode=view_mode,
-        priority_filter=priority_filter,
-        tag_filter=tag_filter,
-        total_count=total_count,
-        open_count=open_count,
-        done_count=done_count,
-        date_range=date_range,
-        user=user,
-    )
-
-# For adding tasks
-@app.route('/add', methods=['POST'])
-@login_required
-def add():
-    title = request.form['title']
-    due_date = request.form.get('due_date') or None
-    due_time = request.form.get('due_time') or None
-    priority = request.form.get('priority') or None
-    tag = request.form.get('tag') or None
-
-    
-    add_task(
-        session["user_id"],
-        title,
-        due_date,
-        due_time, 
-        priority,
-        tag
-    )
-    
-    return redirect(url_for('index'))
-   
-# For completing tasks
-@app.route('/complete/<int:task_id>', methods=['POST'])
-@login_required
-def toggle(task_id):
-    toggle_task(task_id, session["user_id"],) 
-    
-    return redirect(url_for('index'))
-
-# For deleting tasks
-@app.route('/delete/<int:task_id>', methods=['DELETE'])
-@login_required
-def delete(task_id):
-    delete_task(task_id, session["user_id"],)
-    return '', 204
-
-# For deleting tasks
-@app.route('/restore/<int:task_id>', methods=['POST'])
-@login_required
-def restore(task_id):
-    restore_task(task_id, session["user_id"],)
-    return '', 204
-
-# For editing task and updating values of edited tasks
-@app.route('/edit/<int:task_id>', methods=['POST'])
-@login_required
-def update(task_id):
-    title = request.form['title']
-    due_date = request.form.get('due_date') or None
-    due_time = request.form.get('due_time') or None
-    priority = request.form.get('priority') or None
-    tag = request.form.get('tag') or None
-    
-    update_task(
-        task_id,
-        session["user_id"],
-        title,
-        due_date,
-        due_time,
-        priority,
-        tag
-    )
-    
-    return redirect(url_for('index'))
-
-# --------- LAB 2 FUNCTIONS --------- #
-
-EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-MIN_PASSWORD_LENGTH = 8
 
 @app.route('/')
 def home():
     if "user_id" in session:
-        return redirect(url_for("profile"))
+        return redirect(url_for("lists"))
     return redirect(url_for("login"))
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -282,7 +177,6 @@ def register():
         return render_template('register.html')
     
     # read form on POST method
-    # TODO: implement added requirements for password (e.g must include sysmbols, etc)
     email = request.form.get('email', '').strip().lower()
     display_name = request.form.get('display_name', '').strip()
     password = request.form.get('password', '')
@@ -330,24 +224,74 @@ def login():
     email = request.form.get('email', '').strip().lower()
     password = request.form.get('password', '')
 
-    user = get_user_by_email(email) if email else None
-    if user is None or not check_password_hash(user["password_hash"], password):
-        flash("Invalid credentials.", "error")
-        return render_template('login.html', email=email)
+    error = None
+    user = None
+    
+    if not email or not password:
+        error = "Email and password are required."
+    elif not EMAIL_PATTERN.match(email):
+        error = "Please enter a valid email address."
+    elif len(password) < MIN_PASSWORD_LENGTH:
+        error = f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
+    else:
+        user = get_user_by_email(email)
+        if user is None:
+            error = "No account found with that email."
+        elif not check_password_hash(user["password_hash"], password):
+            error = "Incorrect password."
 
-    session.clear()
+    if error:
+        flash(error, "error")
+        return render_template('login.html', email=email)
+    
+    session.clear() 
     session.permanent = True
     session["user_id"] = user["id"]
-    return redirect(url_for("profile"))
+    session["pw_version"] = password_version(user["password_hash"])
+    return redirect(url_for("index"))
+
+
+# Validate the token, then allow the user to choose a new password.
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    reset = get_valid_reset(token)
+    if reset is None: 
+        flash("Invalid or expired password reset link.", "error")
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'GET':
+        return render_template('reset_pass.html', token=token)
+    
+    new_password = request.form.get('new_password', '')
+    confirm_new_password = request.form.get('confirm_new_password', '')
+    
+    if len(new_password) < MIN_PASSWORD_LENGTH:
+        flash(f"New password must be at least {MIN_PASSWORD_LENGTH} characters.", "error")
+        return render_template('reset_pass.html', token=token)
+    
+    if new_password != confirm_new_password:
+        flash("New passwords do not match.", "error")
+        return render_template('reset_pass.html', token=token)
+    
+    # Save the hashed password, then delete the used token so it cannot be reused.
+    update_password_hash(reset["user_id"], generate_password_hash(new_password))
+    delete_reset_token(reset["id"])
+    flash("Your password has been reset successfully.", "success")
+    return redirect(url_for('login'))
+
+
+
+# ========================== USER PROFILE ROUTES ========================== #
 
 # Profile page shows the current user's account details
 @app.route('/profile')
+@login_required
 def profile():
     user = get_user_by_id(session["user_id"])
     if user is None:
         session.clear()
         return redirect(url_for("login"))
-    stats = get_task_stats(user["id"])
+    stats = get_user_task_stats(session["user_id"])
     return render_template('profile.html', user=user, stats=stats)
 
 # Edit profile updates the display name submitted from the profile form.
@@ -392,7 +336,11 @@ def change_password():
         flash("New password must be different from the current one.", "error")
     else:
         update_password_hash(user["id"], generate_password_hash(new_password))
-        flash("Password updated.", "success")
+        session.clear()
+        flash("Password updated. Please log in with your new password.", "success")
+        return redirect(url_for('login'))
+
+    return redirect(url_for('profile'))
 
     return redirect(url_for('profile'))
 
@@ -423,13 +371,6 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for("login"))
 
-# This route currently clears the session and behaves like a logout endpoint
-@app.route('/edit_profile', methods=['POST'])
-def login_required():
-    session.clear()
-    flash("You have been logged out.", "success")
-    return redirect(url_for("login"))
-
 # Accept an email and send a reset link if an account exists
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -448,34 +389,348 @@ def forgot_password():
     flash("A password reset link has been sent to your email.", "success")
     return redirect(url_for('login'))
 
-# Validate the token, then allow the user to choose a new password.
-@app.route('/reset-password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    reset = get_valid_reset(token)
-    if reset is None: 
-        flash("Invalid or expired password reset link.", "error")
-        return redirect(url_for('forgot_pass'))
-    
-    if request.method == 'GET':
-        return render_template('reset_pass.html', token=token)
-    
-    new_password = request.form.get('new_password', '')
-    confirm_new_password = request.form.get('confirm_new_password', '')
-    
-    if len(new_password) < MIN_PASSWORD_LENGTH:
-        flash(f"New password must be at least {MIN_PASSWORD_LENGTH} characters.", "error")
-        return render_template('reset_pass.html', token=token)
-    
-    if new_password != confirm_new_password:
-        flash("New passwords do not match.", "error")
-        return render_template('reset_pass.html', token=token)
-    
-    # Save the hashed password, then delete the used token so it cannot be reused.
-    update_password_hash(reset["user_id"], generate_password_hash(new_password))
-    delete_reset_token(reset["id"])
-    flash("Your password has been reset successfully.", "success")
-    return redirect(url_for('login'))
 
+# ========================== LISTS AND SHARING RUOTES========================== #
+
+# For the home interface
+@app.route('/tasks')
+@login_required
+def index():
+    personal, _ = get_lists_for_user(session["user_id"])
+
+    if not personal:
+        abort(404)
+
+    return redirect(url_for("show_list", list_id=personal[0]["id"]))
+# calls function in database.py to return lists user belongs to
+@app.route("/lists")
+@login_required
+def lists():
+    personal, _ = get_lists_for_user(session["user_id"])
+    return redirect(url_for("show_list", list_id=personal[0]["id"]))
+
+@app.route("/lists", methods=["POST"])
+@login_required
+def create_list_route():
+    name = request.form.get("name", "").strip()
+
+    if not name or len(name) > 100:
+        abort(400)
+
+    list_id = create_shared_list(session["user_id"], name)
+    flash("List created.", "toast-success")
+    return redirect(url_for("show_list", list_id=list_id))
+
+@app.route("/lists/<int:list_id>")
+@login_required
+def show_list(list_id):
+    uid = session["user_id"]
+
+    if not is_member(list_id, uid):
+        abort(404)
+        
+    # Retrieve data for personal and shared lists
+    current_list = get_list_details(list_id)
+    personal, shared = get_lists_for_user(uid)
+    
+    personal_list = personal[0] if isinstance(personal, list) and personal else personal
+
+    is_shared = current_list.get('is_shared', False) or (
+        personal_list and current_list['id'] != personal_list['id']
+    )
+    
+    # URL Filters (Force tab='all' for shared lists)
+    tab = 'all' if is_shared else request.args.get('tab', 'all')
+    view_mode = request.args.get('view', 'list')
+    priority_filter = request.args.get('priority', '')
+    tag_filter = request.args.get('tag', '')
+
+   
+    
+    for s in shared:
+        s_id = s['id'] if isinstance(s, dict) else s.id
+        s_open = len([t for t in get_all_tasks(uid, s_id) if t['completed'] in (0, False)])
+        if isinstance(s, dict):
+            s['open_count'] = s_open
+        else:
+            s.open_count = s_open
+            
+    tasks = get_all_tasks(uid, list_id)
+    members = get_members(list_id)
+    
+    stats = {
+            "total": len(tasks),
+            "open": len([t for t in tasks if t['completed'] in (0, False)]),
+            "done": len([t for t in tasks if t['completed'] in (1, True)]),
+        }
+    
+    if personal_list and personal_list['id'] != list_id:
+        personal_stats = get_task_stats(personal_list['id'], uid)
+    else:
+        personal_stats = stats
+
+    # Apply priority & tag filters
+    if priority_filter:
+        tasks = [t for t in tasks if t.get('priority') == priority_filter]
+
+    if tag_filter:
+        tasks = [t for t in tasks if t.get('tag') == tag_filter]
+
+
+    # Split into open and done
+    open_tasks = [t for t in tasks if t['completed'] == 0]
+    done_tasks = [t for t in tasks if t['completed'] == 1]
+
+    # Respect tab selection ('ongoing', 'completed', 'all')
+    if tab == 'ongoing':
+        done_tasks = []
+    elif tab == 'completed':
+        open_tasks = []
+        
+    # Group open tasks by due date
+    today = datetime.now().date()
+
+    today_tasks = []
+    upcoming_tasks = []
+    no_due_date_tasks = []
+    overdue_date_tasks = []
+
+    for t in open_tasks:
+        if not t['due_date']:
+            no_due_date_tasks.append(t)
+            continue
+
+        due = t['due_date']
+
+        if isinstance(due, str):
+            due = datetime.strptime(due, "%Y-%m-%d").date()
+
+        if due < today:
+            overdue_date_tasks.append(t)
+        elif due == today:
+            today_tasks.append(t)
+        else:
+            upcoming_tasks.append(t)
+
+    grouped_open = []
+    if overdue_date_tasks:
+        grouped_open.append(("Overdue", overdue_date_tasks))
+    if today_tasks:
+        grouped_open.append(("Today", today_tasks))
+    if no_due_date_tasks:
+        grouped_open.append(("No Due Date", no_due_date_tasks))
+    if upcoming_tasks:
+        grouped_open.append(("Upcoming", upcoming_tasks))
+
+    # Week range for calendar view
+    def fmt(d):
+        return d.strftime("%b %d").replace(" 0", " ")
+
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    date_range = f"{fmt(start_of_week)} - {fmt(end_of_week)}, {end_of_week.year}"
+    
+    return render_template(
+        "index.html",
+        current_list=current_list,
+        personal_list=personal_list,
+        personal=personal,
+        shared=shared,
+        tasks=tasks,
+        members=members,
+        stats=stats,
+        is_owner=(current_list["owner_id"] == uid),
+        user=get_user_by_id(uid),
+        tab=tab,
+        view_mode=view_mode,
+        priority_filter=priority_filter,
+        tag_filter=tag_filter,
+        grouped_open=grouped_open,
+        done_tasks=done_tasks,
+        total_count=stats["total"],
+        open_count=stats["open"],
+        done_count=stats["done"],
+        personal_total_count=personal_stats["total"],
+        personal_open_count=personal_stats["open"],
+        personal_done_count=personal_stats["done"],
+        date_range=date_range,
+    )
+    
+
+@app.route("/lists/<int:list_id>/members", methods=["POST"])
+@login_required
+def add_list_member(list_id):
+    uid = session["user_id"]
+
+    if not is_member(list_id, uid):
+        abort(404)
+
+    current_list = get_list_details(list_id)
+    if current_list["owner_id"] != uid:
+        abort(403)
+
+    value = request.form.get("user", "").strip().lower()
+    if not value:
+        flash("Enter an email", "error")
+        return redirect(url_for("show_list", list_id=list_id))
+
+    invitee = find_user_for_invite(value)
+
+    if invitee is None:
+        flash("No user found with that email.", "error")
+    elif invitee["id"] == uid:
+        flash("You're already in this list.", "error")
+    elif not add_member(list_id, uid, invitee["id"]):
+        flash(f"{invitee['display_name']} is already a member.", "error")
+    else:
+        flash(f"{invitee['display_name']} was added to the list.", "success")
+
+    return redirect(url_for("show_list", list_id=list_id) + "#share") 
+
+@app.route("/lists/<int:list_id>/members/<int:member_id>/remove", methods=["POST"])
+@login_required
+def remove_list_member(list_id, member_id):
+    uid = session["user_id"]
+
+    if not is_member(list_id, uid):
+        abort(404)
+
+    current_list = get_list_details(list_id)
+    if current_list["owner_id"] != uid:
+        abort(403)      # members can see the list but can't invite
+    if current_list["is_personal"]:
+        abort(400)      # personal lists can't be shared
+    
+    
+    
+    if member_id == uid:
+        flash("The owner can't be removed from their own list.", "error")
+    elif remove_member(list_id, uid, member_id):
+        flash("Member removed.", "success")
+    else:
+        flash("That user isn't a member of this list.", "error")
+
+    return redirect(url_for("show_list", list_id=list_id) + "#share")
+
+# ========================== CRUD ACTIONS ========================== #
+# Adds task to list 
+@app.route('/add', methods=['POST'])
+@login_required
+def add():
+    uid = session["user_id"]
+
+    list_id = request.form.get("list_id", type=int)
+    if list_id is None:
+        abort(400, description="missing or invalid list_id")
+    if not is_member(list_id, uid):
+        abort(404)
+
+    title = request.form.get('title', '').strip()
+    if not title:
+        abort(400, description="empty title")
+
+    due_date = request.form.get('due_date') or None
+    due_time = request.form.get('due_time') or None
+    priority = request.form.get('priority') or None
+    tag = request.form.get('tag') or None
+
+    if list_id is None:
+        abort(400)
+    
+    task_id = add_task(uid, list_id, title, due_date, due_time, priority, tag)
+    if task_id is None:
+        abort(404)  # not a member of this list
+
+    flash("Task added.", "toast-success")
+    return redirect(url_for('show_list', list_id=list_id))
+   
+# For completing tasks
+@app.route('/complete/<int:task_id>', methods=['POST'])
+@login_required
+def toggle(task_id):
+    uid = session["user_id"]
+    task = get_task(task_id, uid)
+
+    if task is None:
+        abort(404)
+
+    if not toggle_task(task_id, uid):
+        abort(404)
+    
+    flash("Task marked as ongoing." if task["completed"] else "Task completed.", "toast-success")
+
+    return redirect(url_for("show_list", list_id=task["list_id"]))
+
+
+# For deleting tasks
+@app.route('/delete/<int:task_id>', methods=['DELETE'])
+@login_required
+def delete(task_id):
+    uid = session["user_id"]
+    task = get_task(task_id, uid)
+
+    if task is None:
+        abort(404)
+        
+    task_list = get_list_details(task["list_id"])
+    if task_list is None:
+        abort(404)
+        
+    # Only the owner of this list can delete its tasks.
+    if task_list["owner_id"] != uid:
+        abort(403)
+        
+    if not delete_task(task_id, uid):
+        abort(404)
+
+    return "", 204
+
+
+# For restoring deleted tasks
+@app.route('/restore/<int:task_id>', methods=['POST'])
+@login_required
+def restore(task_id):
+    uid = session["user_id"]
+    task = get_task(task_id, uid)
+
+    if task is None:
+        abort(404)
+
+    if not restore_task(task_id, uid):
+        abort(404)
+
+    return "", 204
+
+
+# For editing task and updating values of edited tasks
+@app.route('/edit/<int:task_id>', methods=['POST'])
+@login_required
+def update(task_id):
+    task = get_task(task_id, session["user_id"])
+    if task is None:
+        abort(404)
+        
+    title = request.form['title']
+    due_date = request.form.get('due_date') or None
+    due_time = request.form.get('due_time') or None
+    priority = request.form.get('priority') or None
+    tag = request.form.get('tag') or None
+    
+    if not update_task(
+        task_id,
+        session["user_id"],
+        title,
+        due_date,
+        due_time,
+        priority,
+        tag
+    ):
+        abort(404)
+    
+    flash("Task updated.", "toast-success")
+    return redirect(url_for('show_list', list_id=task["list_id"]))
+
+# ========================== MAIN ENTRY POINT ========================== #
 
 if __name__ == '__main__':
-    app.run(debug=True)   
+    app.run(debug=True)  

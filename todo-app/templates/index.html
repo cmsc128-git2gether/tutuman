@@ -25,41 +25,80 @@
                 <p class="app-name">Tutuman</p>
             </section>
 
+            <!-- personal lists are the only lists that have status filters -->
             <nav class="view-menu">
-                <p class="view-title">Views</p>
+                <p class="view-title">Personal</p>
 
-                <a href="{{ url_for('index', tab='all', view=view_mode) }}"
-                    class="{{ 'active' if tab == 'all' }} view-item">
+                <a href="{{ url_for('show_list', list_id=personal_list.id, tab='all', view=view_mode) }}"
+                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'all' }} view-item"
+                    {% if (not current_list or current_list.id==personal_list.id) and tab=='all' %}aria-current="page"
+                    {% endif %}>
                     <p class="view-name">All</p>
-                    <p class="view-value">{{ total_count }}</p>
+                    <p class="view-value" id="nav-total-count">...</p>
                 </a>
-                <a href="{{ url_for('index', tab='ongoing', view=view_mode) }}"
-                    class="{{ 'active' if tab == 'ongoing' }} view-item">
+                <a href="{{ url_for('show_list', list_id=personal_list.id, tab='ongoing', view=view_mode) }}"
+                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'ongoing' }} view-item"
+                    {% if (not current_list or current_list.id==personal_list.id) and tab=='ongoing'
+                    %}aria-current="page" {% endif %}>
                     <p class="view-name">Ongoing</p>
-                    <p class="view-value">{{ open_count }}</p>
+                    <p class="view-value" id="nav-open-count">{{ open_count if (not current_list or current_list.id ==
+                        personal_list.id) else personal_open_count }}</p>
                 </a>
-                <a href="{{ url_for('index', tab='completed', view=view_mode) }}"
-                    class="{{ 'active' if tab == 'completed' }} view-item">
+                <a href="{{ url_for('show_list', list_id=personal_list.id, tab='completed', view=view_mode) }}"
+                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'completed' }} view-item"
+                    {% if (not current_list or current_list.id==personal_list.id) and tab=='completed'
+                    %}aria-current="page" {% endif %}>
                     <p class="view-name">Completed</p>
-                    <p class="view-value">{{ done_count }}</p>
+                    <p class="view-value" id="nav-done-count">{{ done_count if (not current_list or current_list.id ==
+                        personal_list.id) else personal_done_count }}</p>
                 </a>
             </nav>
 
+            <!-- shared lists navigation -->
+            <nav class="view-menu">
+                <p class="view-title shared-title">
+                    Shared
+                    <button type="button" class="btn btn-primary" id="newListBtn" aria-label="New shared list">
+                        <i class="bi bi-plus"></i> New
+                    </button>
+                </p>
+
+                {% for l in shared %}
+                <a href="{{ url_for('show_list', list_id=l.id, view=view_mode) }}"
+                    class="{{ 'active' if current_list and l.id == current_list.id }} view-item" {% if current_list and
+                    l.id==current_list.id %}aria-current="page" {% endif %}>
+                    <p class="view-name">{{ l.name }}</p>
+                    <p class="view-value">{{ l.open_count }}</p>
+                </a>
+                {% else %}
+                <button type="button" class="empty-cta" id="emptyNewListBtn">
+                    <i class="bi bi-people"></i>
+                    <span>Create your first shared list</span> </button>
+                {% endfor %}
+
+                <form method="POST" action="{{ url_for('create_list_route') }}" id="newListForm" class="new-list-form"
+                    hidden>
+                    <input type="text" name="name" maxlength="100" placeholder="List name" required>
+                    <button type="submit" class="btn btn-primary" data-loading-text="Creating…">Create</button>
+                </form>
+            </nav>
+
+            <!-- stats card section -->
             <section class="stats">
                 <section class="stat-layout">
                     <div class="stat-card">
                         <p class="stat-title">Total</p>
-                        <p class="stat-value">{{ total_count }}</p>
+                        <p class="stat-value" id="stat-total-count">{{ total_count }}</p>
                     </div>
 
                     <div class="stat-card">
                         <p class="stat-title">Open</p>
-                        <p class="stat-value">{{ open_count }}</p>
+                        <p class="stat-value" id="stat-open-count">{{ open_count }}</p>
                     </div>
 
                     <div class="stat-card">
                         <p class="stat-title">Done</p>
-                        <p class="stat-value">{{ done_count }}</p>
+                        <p class="stat-value" id="stat-done-count">{{ done_count }}</p>
                     </div>
                 </section>
 
@@ -72,6 +111,13 @@
                     </span>
                     <i class="bi bi-chevron-right"></i>
                 </a>
+
+                <form action="{{ url_for('logout') }}" method="POST">
+                    <button type="submit" class="btn btn-secondary btn-sm" style="width:100%">
+                        <i class="bi bi-box-arrow-right"></i> Log out
+                    </button>
+                </form>
+
                 {% endif %}
             </section>
         </section>
@@ -82,23 +128,48 @@
             <!-- header section -->
             <header class="content-header">
                 <div class="header-title">
-                    <p>{{ tab | capitalize if tab != 'all' else 'All Tasks' }}</p>
+
+                    <nav class="breadcrumb" aria-label="Breadcrumb">
+                        <a href="{{ url_for('index') }}">My tasks</a>
+                        <i class="bi bi-chevron-right"></i>
+                        <span>{{ 'Personal' if current_list.is_personal else 'Shared' }}</span>
+                    </nav>
+
+                    <p class="list-title">{{ current_list.name }}</p>
+                    <p class="header-meta">
+                        {{ members | length }} collaborator{{ '' if members | length == 1 else 's' }}
+                        · {{ open_count }} open
+                    </p>
+
+                    <div class="avatar-row">
+                        {% for m in members %}
+                        <span class="avatar" style="background: {{ m.id | avatar_color }}"
+                            title="{{ m.display_name }}{{ ' (owner)' if m.is_owner }}">
+                            {{ (m.display_name or '?')[0] | upper }}
+                        </span>
+                        {% endfor %}
+                    </div>
                 </div>
 
                 <div class="header-actions">
+                    {% if is_owner and not current_list.is_personal %}
+                    <button class="btn btn-secondary" type="button" id="inviteBtn">
+                        <i class="bi bi-person-plus"></i> Invite
+                    </button>
+                    {% endif %}
 
                     <div class="filter-wrapper">
-                        <button class="filter-btn" type="button" id="filterBtn">
+                        <button class="btn btn-secondary" type="button" id="filterBtn">
                             <i class="bi bi-filter"></i> Filter
                             {% if priority_filter or tag_filter %}<span class="filter-badge"></span>{% endif %}
                         </button>
 
                         <div class="filter-panel" id="filterPanel">
-                            <form method="GET" action="/">
+                            <form method="GET" action="{{ url_for('show_list', list_id=current_list.id) }}">
                                 <input type="hidden" name="tab" value="{{ tab }}">
                                 <input type="hidden" name="view" value="{{ view_mode }}">
 
-                                <div class="form-group">
+                                <div class="field">
                                     <label for="filter-priority">Priority</label>
                                     <select id="filter-priority" name="priority">
                                         <option value="" {{ 'selected' if not priority_filter }}>All</option>
@@ -108,7 +179,7 @@
                                     </select>
                                 </div>
 
-                                <div class="form-group">
+                                <div class="field">
                                     <label for="filter-tag">Tag</label>
                                     <select id="filter-tag" name="tag">
                                         <option value="" {{ 'selected' if not tag_filter }}>All</option>
@@ -120,24 +191,16 @@
                                 </div>
 
                                 <div class="filter-actions">
-                                    <a href="/?tab={{ tab }}&view={{ view_mode }}" class="cancel-btn">Clear</a>
-                                    <button type="submit" class="add-task-btn">Apply</button>
+                                    <a href="{{ url_for('show_list', list_id=current_list.id, tab=tab, view=view_mode) }}"
+                                        class="btn btn-secondary">Clear</a>
+                                    <button type="submit" class="btn btn-primary">Apply</button>
                                 </div>
                             </form>
                         </div>
                     </div>
 
-                    <div class="view-toggle">
-                        <a href="/?tab={{ tab }}&view=list" class="{{ 'active' if view_mode == 'list' }}">
-                            <i class="bi bi-list-ul"></i> List
-                        </a>
-                        <a href="/?tab={{ tab }}&view=calendar" class="{{ 'active' if view_mode == 'calendar' }}">
-                            <i class="bi bi-calendar"></i> Calendar
-                        </a>
-                    </div>
-
-                    <button class="new-task-btn" type="button" id="newTaskBtn">
-                        <i class="bi bi-plus"></i> New Task
+                    <button class="btn btn-primary" type="button" id="newTaskBtn">
+                        <i class="bi bi-plus-square"></i> New Task
                     </button>
                 </div>
             </header>
@@ -145,7 +208,8 @@
             <!-- task list section -->
             <section class="scrollable">
                 {% for label, group_tasks in grouped_open %}
-                <p class="date-group-label">{{ label }} <span>{{ group_tasks | length }}</span></p>
+                <p class="date-group-label {{ 'overdue' if label == 'Overdue' }}">{{ label }} <span>{{ group_tasks |
+                        length }}</span></p>
 
                 <ul class="task-list">
                     {% for task in group_tasks %}
@@ -173,7 +237,9 @@
                                 </div>
                             </div>
 
-                            <div class="task-due-date">
+                            <div class="task-due-date {{ 'overdue' if label == 'Overdue' }}">
+                                {% if label == 'Overdue' %}<i class="bi bi-exclamation-circle" aria-hidden="true"></i>{%
+                                endif %}
                                 <span class="task-date">{{ task.due_date | format_date }}</span>
                                 <span class="task-time">{{ task.due_time | format_time }}</span>
                             </div>
@@ -248,36 +314,65 @@
                     {% endfor %}
                 </ul>
                 {% endif %}
+
+                {% if not grouped_open and not done_tasks %}
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+
+                    {% if priority_filter or tag_filter %}
+                    <p class="empty-title">No tasks match this filter</p>
+                    <a href="{{ url_for('show_list', list_id=current_list.id, tab=tab, view=view_mode) }}"
+                        class="btn btn-secondary">Clear filter</a>
+
+                    {% elif tab == 'completed' %}
+                    <p class="empty-title">Nothing completed yet</p>
+                    <p class="empty-sub">Finished tasks will show up here.</p>
+
+                    {% elif tab == 'ongoing' %}
+                    <p class="empty-title">All caught up</p>
+                    <p class="empty-sub">You have no open tasks.</p>
+
+                    {% else %}
+                    <p class="empty-title">No tasks yet</p>
+                    <p class="empty-sub">Add your first task to get started.</p>
+                    <button type="button" class="btn btn-primary" id="emptyNewTaskBtn">
+                        <i class="bi bi-plus-square"></i> New Task
+                    </button>
+                    {% endif %}
+                </div>
+                {% endif %}
             </section>
         </section>
     </section>
 
     <!-- modal for add new task feature -->
     <div class="modal-overlay" id="taskModal">
-        <div class="task-modal">
+        <div class="task-modal modal-sm">
 
             <div class="modal-header">
                 <h2>New Task</h2>
-                <button type="button" class="modal-close" id="closeTaskModal">
+                <button type="button" class="icon-btn" id="closeTaskModal">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
 
             <form action="{{ url_for('add') }}" method="POST">
+                <input type="hidden" name="list_id" value="{{ current_list.id }}">
 
-                <div class="form-group">
+                <div class="field">
                     <label for="title">Task</label>
                     <input type="text" id="title" name="title" placeholder="What needs to be done?" required>
+                    <input type="hidden" name="list_id" value="{{ current_list.id }}">
                 </div>
 
                 <div class="form-row">
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="due_date">Due Date</label>
                         <input type="date" id="due_date" name="due_date">
                     </div>
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="due_time">Due Time</label>
                         <input type="time" id="due_time" name="due_time">
                     </div>
@@ -285,7 +380,7 @@
 
                 <div class="form-row">
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="priority">Priority</label>
                         <select id="priority" name="priority">
                             <option value="Low">Low</option>
@@ -294,7 +389,7 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="tag">Tag</label>
                         <select id="tag" name="tag">
                             <option value="School">School</option>
@@ -305,11 +400,11 @@
                 </div>
 
                 <div class="modal-actions">
-                    <button type="button" class="cancel-btn" id="cancelTask">
+                    <button type="button" class="btn btn-secondary" id="cancelTask">
                         Cancel
                     </button>
 
-                    <button type="submit" class="add-task-btn">
+                    <button type="submit" class="btn btn-primary" data-loading-text="Adding…">
                         Add Task
                     </button>
                 </div>
@@ -321,31 +416,31 @@
 
     <!-- modal for edit task feature -->
     <div class="modal-overlay" id="editTaskModal">
-        <div class="task-modal">
+        <div class="task-modal modal-sm">
 
             <div class="modal-header">
                 <h2>Edit Task</h2>
 
-                <button type="button" class="modal-close close-btn" id="closeEditModal">
+                <button type="button" class="icon-btn close-btn" id="closeEditModal">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
 
             <form id="editTaskForm" method="POST">
 
-                <div class="form-group">
+                <div class="field">
                     <label for="edit-title">Task</label>
                     <input type="text" id="edit-title" name="title" required>
                 </div>
 
                 <div class="form-row">
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="edit-due_date">Due Date</label>
                         <input type="date" id="edit-due_date" name="due_date">
                     </div>
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="edit-due_time">Due Time</label>
                         <input type="time" id="edit-due_time" name="due_time">
                     </div>
@@ -353,7 +448,7 @@
 
                 <div class="form-row">
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="edit-priority">Priority</label>
 
                         <select id="edit-priority" name="priority">
@@ -363,7 +458,7 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="field">
                         <label for="edit-tag">Tag</label>
 
                         <select id="edit-tag" name="tag">
@@ -377,11 +472,11 @@
 
                 <div class="modal-actions">
 
-                    <button type="button" class="cancel-btn" id="cancelEdit">
+                    <button type="button" class="btn btn-secondary" id="cancelEdit">
                         Cancel
                     </button>
 
-                    <button type="submit" class="add-task-btn">
+                    <button type="submit" class="btn btn-primary" data-loading-text="Saving…">
                         Save Changes
                     </button>
                 </div>
@@ -393,21 +488,21 @@
 
     <!-- modal for delete task dialog  -->
     <div class="modal-overlay" id="deleteConfirmModal">
-        <div class="task-modal">
+        <div class="task-modal modal-sm">
             <div class="modal-header">
                 <h2>Delete Task</h2>
-                <button type="button" class="modal-close" id="closeDeleteModal">
+                <button type="button" class="icon-btn" id="closeDeleteModal">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
 
-            <p>Are you sure you want to delete this task?</p>
+            <p>Delete “<strong id="deleteTaskTitle"></strong>”? You can undo right after.</p>
 
             <div class="modal-actions">
-                <button type="button" class="cancel-btn" id="cancel-delete-btn">
+                <button type="button" class="btn btn-secondary" id="cancel-delete-btn">
                     Cancel
                 </button>
-                <button type="button" class="add-task-btn danger" id="confirm-delete-btn">
+                <button type="button" class="btn btn-danger" id="confirm-delete-btn">
                     Delete
                 </button>
             </div>
@@ -420,8 +515,60 @@
         <button type="button" id="undoBtn">Undo</button>
     </div>
 
+    <!-- status notification -->
+    <div class="toast" id="statusToast" role="status" aria-live="polite">
+        <span></span>
+    </div>
 
+    {% for category, msg in get_flashed_messages(with_categories=true, category_filter=["toast-success", "toast-error"])
+    %}
+    <div id="flashData" hidden data-message="{{ msg }}" data-type="{{ category.replace('toast-', '') }}"></div>
+    {% endfor %}
 
+    <!-- modal for invite collaborator -->
+    {% if not current_list.is_personal %}
+    <div class="modal-overlay" id="shareModal">
+        <div class="task-modal modal-md">
+            <div class="modal-header">
+                <div>
+                    <h2>Share “{{ current_list.name }}”</h2>
+                    <p class="share-sub">Invite people to add and complete tasks</p>
+                </div>
+                <button type="button" class="icon-btn" id="closeShareModal">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true, category_filter=["success", "error"]) %}
+            {% for category, msg in messages %}
+            <p class="message share-flash {{ category }}">{{ msg }}</p>
+            {% endfor %}
+            {% endwith %}
+
+            {% if is_owner %}
+            <form method="POST" action="{{ url_for('add_list_member', list_id=current_list.id) }}" class="share-form">
+                <input type="email" name="user" placeholder="teammate@example.com" required>
+                <button type="submit" class="btn btn-primary" data-loading-text="Sending invite…">Send invite</button>
+            </form>
+            {% endif %}
+
+            <p class="share-label">People with access</p>
+            <ul class="share-list">
+                {% for m in members %}
+                <li class="share-person">
+                    <span class="avatar avatar-lg" style="background: {{ m.id | avatar_color }}">{{ m.display_name |
+                        initials }}</span>
+                    <div class="share-info">
+                        <p class="share-name">{{ m.display_name }}{{ ' (you)' if m.id == user.id }}</p>
+                        <p class="share-email">{{ m.email }}</p>
+                    </div>
+                    <span class="share-role">{{ 'Owner' if m.is_owner else 'Can edit' }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
 </body>
 
 </html>

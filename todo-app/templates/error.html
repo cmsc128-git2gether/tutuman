@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} | Tutuman</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/shared.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+
+<body class="auth-page">
+    <main class="auth-card" style="text-align:center">
+        <p class="empty-title" style="font-size:40px;font-weight:600">{{ code }}</p>
+        <h1 style="font-size:18px;margin:8px 0">{{ title }}</h1>
+        <p style="color:var(--secondary-text);margin-bottom:var(--spacing-lg)">{{ message }}</p>
+
+        {% if session.get('user_id') %}
+        <a href="{{ url_for('home') }}" class="btn btn-primary">Back to my tasks</a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="btn btn-primary">Go to login</a>
+        {% endif %}
+    </main>
+</body>
+
+</html>

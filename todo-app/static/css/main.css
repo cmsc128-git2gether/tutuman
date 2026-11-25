@@ -3,19 +3,9 @@
 
 @import "base.css";
 @import "style.css";
-
-@view-transition {
-    navigation: auto;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    ::view-transition-group(auth-card) {
-        animation-duration: 0.25s;
-        animation-timing-function: ease;
-    }
-
-    ::view-transition-old(root),
-    ::view-transition-new(root) {
-        animation-duration: 0.2s;
-    }
-}
+@import "shared.css";
+@import "modals.css";
+@import "layout.css";
+@import "profiles.css";
+@import "tasks.css";
+@import "auth.css";

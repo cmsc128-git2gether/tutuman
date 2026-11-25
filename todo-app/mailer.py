@@ -15,15 +15,49 @@ def send_reset_email(to_email, link):
     msg = EmailMessage()
     
     # Set the email subject, sender, and recipient.
-    msg["Subject"] = "Reset your password"
-    msg["From"] = os.getenv("SMTP_USER")
+    msg["Subject"] = "TUTUMAN APP: Reset your password"
+    msg["From"] = os.getenv("MAIL_SENDER")
     msg["To"] = to_email
     
     # Body of the email and the user is also informed that the link is valid for 30 minutes.
+    # Addtnl: Plain-text version (fallback for email clients that don't show HTML).
     msg.set_content(
-        f"Use this link to reset your password (valid for 30 minutes):\n\n{link}\n\n"
-        "If you didn't ask for this, ignore this email."
+        "Hi,\n\n"
+        "We received a request to reset the password for your Tutuman account.\n\n"
+        f"Click the link below to choose a new password (valid for 30 minutes):\n{link}\n\n"
+        "If you didn't ask for this, you can safely ignore this email. "
+        "Your password won't change.\n\n"
+        "- The Tutuman Devs"
     )
+
+    # HTML version with a button.
+    msg.add_alternative(f"""\
+    <html>
+    <body style="font-family: Arial, sans-serif; background:#f4f4f7; padding:24px;">
+        <div style="max-width:480px; margin:auto; background:#ffffff; padding:32px; border-radius:8px;">
+        <h2 style="margin-top:0; color:#4f46e5;">Reset your password</h2>
+        <p style="color:#444; line-height:1.5;">
+            We received a request to reset the password for your Tutuman account.
+            Click the button below to choose a new one.
+        </p>
+        <p style="text-align:center; margin:28px 0;">
+            <a href="{link}"
+            style="background:#4f46e5; color:#ffffff; padding:12px 24px;
+                    text-decoration:none; border-radius:6px; display:inline-block;">
+            Reset password
+            </a>
+        </p>
+        <p style="color:#666; font-size:13px; line-height:1.5;">
+            This link is valid for 30 minutes. If the button doesn't work, copy and paste this link into your browser:<br>
+            <a href="{link}" style="color:#4f46e5; word-break:break-all;">{link}</a>
+        </p>
+        <p style="color:#666; font-size:13px;">
+            If you didn't ask for this, you can safely ignore this email. Your password won't change.
+        </p>
+        </div>
+    </body>
+    </html>
+    """, subtype="html")
     
     # Try to connect to the SMTP server and send the email.
     try:
