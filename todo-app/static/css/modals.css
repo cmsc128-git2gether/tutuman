@@ -2,7 +2,7 @@
     .share-label {
         margin: 0 0 12px;
         font-family: 'Roboto Mono', monospace;
-        font-size: 11px;
+        font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         color: var(--secondary-text);

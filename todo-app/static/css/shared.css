@@ -25,12 +25,21 @@
 .btn,
 .btn-secondary {
     background-color: var(--cards);
-    color: var(--secondary-text);
+    border-color: var(--secondary-text);
+    /* more visible at rest */
+    color: var(--primary-text);
 
     &:hover {
-        color: var(--primary-text);
-        border-color: var(--primary-text);
+        background-color: rgba(var(--accent-rgb), 0.08);
+        border-color: var(--accent);
+        color: var(--accent);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     }
+}
+
+.btn:active {
+    transform: translateY(1px);
+    box-shadow: none;
 }
 
 .btn-primary {
@@ -42,7 +51,8 @@
         background-color: var(--accent);
         border-color: var(--accent);
         color: var(--background);
-        opacity: 0.9;
+        filter: brightness(0.9);
+        box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.35);
     }
 }
 

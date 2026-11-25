@@ -85,7 +85,6 @@
 
             <!-- stats card section -->
             <section class="stats">
-                <p class="view-title">{{ current_list.name }}</p>
                 <section class="stat-layout">
                     <div class="stat-card">
                         <p class="stat-title">Total</p>
@@ -136,7 +135,6 @@
                         <span>{{ 'Personal' if current_list.is_personal else 'Shared' }}</span>
                     </nav>
 
-                    <p class="list-title">{{ current_list.name }}</p>
                     <p class="list-title">{{ current_list.name }}</p>
                     <p class="header-meta">
                         {{ members | length }} collaborator{{ '' if members | length == 1 else 's' }}
@@ -210,7 +208,8 @@
             <!-- task list section -->
             <section class="scrollable">
                 {% for label, group_tasks in grouped_open %}
-                <p class="date-group-label">{{ label }} <span>{{ group_tasks | length }}</span></p>
+                <p class="date-group-label {{ 'overdue' if label == 'Overdue' }}">{{ label }} <span>{{ group_tasks |
+                        length }}</span></p>
 
                 <ul class="task-list">
                     {% for task in group_tasks %}

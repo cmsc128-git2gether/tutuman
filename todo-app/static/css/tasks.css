@@ -4,12 +4,17 @@
     min-height: 0;
     overflow-y: auto;
 
+    .date-group-label.overdue,
+    .date-group-label.overdue span {
+        color: var(--high-priority);
+    }
+
     .date-group-label,
     .done-label {
         padding: var(--spacing-sm) var(--spacing-xs);
         margin-top: var(--spacing-md);
         font-family: 'Roboto Mono', monospace;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -124,7 +129,7 @@
     .tag {
         padding: 2px 7px;
         border-radius: 5px;
-        font-size: 10.5px;
+        font-size: 12px;
         font-weight: 500;
         color: var(--primary-text);
     }
@@ -180,6 +185,16 @@
     .task-time {
         font-size: 12px;
         opacity: 0.7;
+    }
+
+    .task-due-date.overdue {
+        color: var(--high-priority);
+
+        .task-date,
+        .task-time {
+            color: var(--high-priority);
+            opacity: 1;
+        }
     }
 
     /* ---------- Edit / delete ---------- */
