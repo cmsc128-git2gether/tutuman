@@ -30,19 +30,24 @@
                 <p class="view-title">Personal</p>
 
                 <a href="{{ url_for('show_list', list_id=personal_list.id, tab='all', view=view_mode) }}"
-                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'all' }} view-item">
+                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'all' }} view-item"
+                    {% if (not current_list or current_list.id==personal_list.id) and tab=='all' %}aria-current="page"
+                    {% endif %}>
                     <p class="view-name">All</p>
-                    <p class="view-value" id="nav-total-count">{{ total_count if (not current_list or current_list.id ==
-                        personal_list.id) else personal_total_count }}</p>
+                    <p class="view-value" id="nav-total-count">...</p>
                 </a>
                 <a href="{{ url_for('show_list', list_id=personal_list.id, tab='ongoing', view=view_mode) }}"
-                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'ongoing' }} view-item">
+                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'ongoing' }} view-item"
+                    {% if (not current_list or current_list.id==personal_list.id) and tab=='ongoing'
+                    %}aria-current="page" {% endif %}>
                     <p class="view-name">Ongoing</p>
                     <p class="view-value" id="nav-open-count">{{ open_count if (not current_list or current_list.id ==
                         personal_list.id) else personal_open_count }}</p>
                 </a>
                 <a href="{{ url_for('show_list', list_id=personal_list.id, tab='completed', view=view_mode) }}"
-                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'completed' }} view-item">
+                    class="{{ 'active' if (not current_list or current_list.id == personal_list.id) and tab == 'completed' }} view-item"
+                    {% if (not current_list or current_list.id==personal_list.id) and tab=='completed'
+                    %}aria-current="page" {% endif %}>
                     <p class="view-name">Completed</p>
                     <p class="view-value" id="nav-done-count">{{ done_count if (not current_list or current_list.id ==
                         personal_list.id) else personal_done_count }}</p>
@@ -60,7 +65,8 @@
 
                 {% for l in shared %}
                 <a href="{{ url_for('show_list', list_id=l.id, view=view_mode) }}"
-                    class="{{ 'active' if current_list and l.id == current_list.id }} view-item">
+                    class="{{ 'active' if current_list and l.id == current_list.id }} view-item" {% if current_list and
+                    l.id==current_list.id %}aria-current="page" {% endif %}>
                     <p class="view-name">{{ l.name }}</p>
                     <p class="view-value">{{ l.open_count }}</p>
                 </a>
@@ -79,6 +85,7 @@
 
             <!-- stats card section -->
             <section class="stats">
+                <p class="view-title">{{ current_list.name }}</p>
                 <section class="stat-layout">
                     <div class="stat-card">
                         <p class="stat-title">Total</p>
@@ -105,6 +112,13 @@
                     </span>
                     <i class="bi bi-chevron-right"></i>
                 </a>
+
+                <form action="{{ url_for('logout') }}" method="POST">
+                    <button type="submit" class="btn btn-secondary btn-sm" style="width:100%">
+                        <i class="bi bi-box-arrow-right"></i> Log out
+                    </button>
+                </form>
+
                 {% endif %}
             </section>
         </section>
@@ -116,6 +130,13 @@
             <header class="content-header">
                 <div class="header-title">
 
+                    <nav class="breadcrumb" aria-label="Breadcrumb">
+                        <a href="{{ url_for('index') }}">My tasks</a>
+                        <i class="bi bi-chevron-right"></i>
+                        <span>{{ 'Personal' if current_list.is_personal else 'Shared' }}</span>
+                    </nav>
+
+                    <p class="list-title">{{ current_list.name }}</p>
                     <p class="list-title">{{ current_list.name }}</p>
                     <p class="header-meta">
                         {{ members | length }} collaborator{{ '' if members | length == 1 else 's' }}
@@ -217,7 +238,9 @@
                                 </div>
                             </div>
 
-                            <div class="task-due-date">
+                            <div class="task-due-date {{ 'overdue' if label == 'Overdue' }}">
+                                {% if label == 'Overdue' %}<i class="bi bi-exclamation-circle" aria-hidden="true"></i>{%
+                                endif %}
                                 <span class="task-date">{{ task.due_date | format_date }}</span>
                                 <span class="task-time">{{ task.due_time | format_time }}</span>
                             </div>

@@ -308,3 +308,27 @@
         font-size: 13px;
     }
 }
+
+/* ========================== BREADCRUMBS ========================== */
+.breadcrumb {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--placeholder-text);
+
+    a {
+        color: var(--secondary-text);
+        text-decoration: none;
+
+        &:hover {
+            color: var(--primary-text);
+            text-decoration: underline;
+        }
+    }
+
+    .bi {
+        font-size: 10px;
+    }
+}
