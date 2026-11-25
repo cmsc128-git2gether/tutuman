@@ -246,7 +246,7 @@ def restore_task(task_id, user_id):
         """
         UPDATE tasks t
         JOIN list_members m ON m.list_id = t.list_id
-        SET t.deleted = , t.deleted_at = NULL
+        SET t.deleted = 0, t.deleted_at = NULL
         WHERE t.id = %s AND m.user_id = %s""",
         (task_id, user_id)
     )

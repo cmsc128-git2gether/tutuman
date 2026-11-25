@@ -616,6 +616,8 @@ def toggle(task_id):
 
     if not toggle_task(task_id, uid):
         abort(404)
+    
+    flash("Task marked as ongoing." if task["completed"] else "Task completed.", "toast-success")
 
     return redirect(url_for("show_list", list_id=task["list_id"]))
 

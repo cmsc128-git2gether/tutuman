@@ -1,4 +1,28 @@
 /* ========================== SHARED HELPERS ========================== */
+let statusToastTimeout = null;
+
+function showStatusToast(message, type = "success") {
+    const toast = document.getElementById("statusToast");
+    if (!toast) return;
+
+    toast.querySelector("span").textContent = message;
+    toast.classList.toggle("error", type === "error");
+    toast.classList.add("show");
+
+    clearTimeout(statusToastTimeout);
+    statusToastTimeout = setTimeout(() => toast.classList.remove("show"), 3500);
+}
+
+// disable the submit button and show a loading label while the form posts
+document.querySelectorAll(".task-modal form, .share-form, .new-list-form").forEach((form) => {
+    form.addEventListener("submit", () => {
+        const btn = form.querySelector('button[type="submit"]');
+        if (!btn || !btn.dataset.loadingText) return;
+        btn.disabled = true;
+        btn.textContent = btn.dataset.loadingText;
+    });
+});
+
 function showError(input, message) {
     const errorEl = input.closest('.field')?.querySelector('.field-error');
     if (errorEl) errorEl.textContent = message;
@@ -135,6 +159,8 @@ document.querySelectorAll(".delete-btn").forEach(function (button) {
     button.addEventListener("click", function () {
         taskIdDelete = this.dataset.taskId;
         taskElementDelete = this.closest(".task-item");
+        document.getElementById("deleteTaskTitle").textContent =
+            taskElementDelete.querySelector(".task-title").textContent;   // <- add
         openDeleteModal();
     });
 });
@@ -176,7 +202,7 @@ function showUndoToast(taskId, element, parent, nextSibling) {
         undoTaskId = null;
         undoElement = null;
         undoTimeoutId = null;
-    }, 5000);
+    }, 10000);
 }
 
 if (undoBtn) {
@@ -192,13 +218,16 @@ if (undoBtn) {
                     throw new Error("Failed to restore task (status " + response.status + ")");
                 }
                 // put the task element back where it was
-                if (undoParent) {
-                    undoParent.insertBefore(undoElement, undoNextSibling);
+                if (undoParent && undoElement) {
+                    if (undoNextSibling && undoNextSibling.parentNode === undoParent) {
+                        undoParent.insertBefore(undoElement, undoNextSibling);
+                    } else {
+                        undoParent.appendChild(undoElement);
+                    }
                 }
             })
             .catch(function (error) {
-                console.error("Error restoring task:", error);
-                alert("Could not undo the delete. Please refresh the page.");
+                showStatusToast("Could not undo the delete. Please refresh the page.", "error");
             })
             .finally(function () {
                 undoToast.classList.remove("show");
@@ -230,8 +259,7 @@ if (confirmDeleteBtn) {
                 }
             })
             .catch(function (error) {
-                console.error("Error deleting task:", error);
-                alert("Could not delete the task. Please try again.");
+                showStatusToast("Could not delete the task. Please try again.", "error");
             })
             .finally(function () {
                 closeDeleteModalView();
@@ -491,6 +519,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ========================== PAGE LIFECYCLE ========================== */
 // reload when the page is restored from the back/forward cache
+const flashData = document.getElementById("flashData");
+if (flashData) showStatusToast(flashData.dataset.message, flashData.dataset.type);
+
 window.addEventListener('pageshow', (event) => {
     if (event.persisted) {
         document.documentElement.style.visibility = 'hidden';
