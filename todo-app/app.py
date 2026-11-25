@@ -2,6 +2,7 @@
 import os
 import re
 import secrets
+import hashlib
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from datetime import datetime, timedelta
@@ -72,12 +73,29 @@ def no_cache(response):
         response.headers["Expires"] = "0"
     return response
 
-# checks if user is logged in 
+# creates a short marker of the user's current password hash
+def password_version(password_hash):
+    return hashlib.sha256(password_hash.encode()).hexdigest()[:16]
+
+# checks if user is logged in and the session still matches the current password
+
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if "user_id" not in session:
+        uid = session.get("user_id")
+        
+        # not logged in: send to the login page
+        if uid is None:
             return redirect(url_for("login"))
+
+        user = get_user_by_id(uid)
+        
+        # account was deleted, or the password changed since this session
+        if user is None or session.get("pw_version") != password_version(user["password_hash"]):
+            session.clear()
+            flash("Please log in again.", "error")
+            return redirect(url_for("login"))
+
         return view(*args, **kwargs)
     return wrapped
 
@@ -140,6 +158,10 @@ def handle_error(e):
     return render_template("error.html", code=e.code, title=title, message=message), e.code
 
 # ========================== AUTHENTICATION AND PASSWORD RESET ========================== #
+def password_fingerprint(password_hash):
+    return hashlib.sha256(password_hash.encode()).hexdigest()[:16]
+
+
 
 @app.route('/')
 def home():
@@ -225,6 +247,7 @@ def login():
     session.clear() 
     session.permanent = True
     session["user_id"] = user["id"]
+    session["pw_version"] = password_version(user["password_hash"])
     return redirect(url_for("index"))
 
 
@@ -313,7 +336,11 @@ def change_password():
         flash("New password must be different from the current one.", "error")
     else:
         update_password_hash(user["id"], generate_password_hash(new_password))
-        flash("Password updated.", "success")
+        session.clear()
+        flash("Password updated. Please log in with your new password.", "success")
+        return redirect(url_for('login'))
+
+    return redirect(url_for('profile'))
 
     return redirect(url_for('profile'))
 
