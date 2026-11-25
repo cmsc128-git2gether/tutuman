@@ -1,0 +1,159 @@
+    /* ========================== SHARED PEOPLE LIST ========================== */
+    .share-label {
+        margin: 0 0 12px;
+        font-family: 'Roboto Mono', monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--secondary-text);
+    }
+
+    .share-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .share-person {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+    }
+
+    .share-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .share-name {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .share-email {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: var(--secondary-text);
+    }
+
+    .share-role {
+        font-size: 0.8rem;
+        color: var(--secondary-text);
+    }
+
+    .modal-md .modal-header {
+        align-items: flex-start;
+        padding-bottom: 16px;
+    }
+
+
+
+
+    /* ========================== TASK MODAL (add / edit / delete) ========================== */
+    .task-modal.modal-sm {
+        width: 100%;
+        max-width: 420px;
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+
+        .modal-header {
+            align-items: center;
+
+            h2 {
+                color: #1a1a1a;
+            }
+
+            .icon-btn {
+                color: #6b7280;
+
+                &:hover {
+                    background: #f3f4f6;
+                    color: #1a1a1a;
+                }
+            }
+        }
+
+        p {
+            margin: 0 0 4px;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+
+            label {
+                margin: 0;
+                font-size: 0.8rem;
+                font-weight: 500;
+                color: #4b5563;
+            }
+
+            select {
+                padding: 10px 12px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                background: #fff;
+                font-size: 0.9rem;
+                color: #1a1a1a;
+            }
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 8px;
+        }
+    }
+
+    .task-modal.modal-md {
+        width: 550px;
+    }
+
+    .share-sub {
+        margin: 4px 0 0;
+        font-size: 13px;
+        letter-spacing: 0.05em;
+        color: var(--secondary-text);
+    }
+
+    .share-form {
+        display: flex;
+        gap: 10px;
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+
+        input[type="email"] {
+            flex: 1;
+            min-width: 0;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: transparent;
+            color: inherit;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.15s ease;
+
+            &::placeholder {
+                font-family: 'DM Sans', system-ui, sans-serif;
+                color: var(--placeholder-text);
+            }
+
+            &:focus {
+                border-color: #5b7cfa;
+            }
+        }
+    }
