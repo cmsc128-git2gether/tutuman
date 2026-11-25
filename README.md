@@ -159,11 +159,11 @@ users (1) ────< tasks (many)          creator
 
 Every query is scoped by the logged-in user's id from the session, never by an id sent from the client alone.
 
-| Role    | Determined by                    | Can                                        |
-| ------- | -------------------------------- | ------------------------------------------ |
-| Member  | row in `list_members`            | view the list, add, edit, complete, and restore deleted tasks      |
+| Role    | Determined by                    | Can                                                                                                     |
+| ------- | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Member  | row in `list_members`            | view the list, add, edit, complete, and restore deleted tasks                                           |
 | Owner   | `lists.owner_id` equals the user | can do what members can do, invite and remove members, delete the list, and delete tasks in their lists |
-| Creator | `tasks.user_id` equals the user  | edit and delete that task                  |
+| Creator | `tasks.user_id` equals the user  | edit and delete that task                                                                               |
 
 | Operation                                          | Ownership check                                                                            | On failure            |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------- |
@@ -210,10 +210,10 @@ def add_list_member(list_id):
 
 **Password Recovery**
 
-| Method | Route | Description | Auth |
-| --- | --- | --- | --- |
-| GET, POST | `/forgot-password` | Show the form and request a password reset link | No |
-| GET, POST | `/reset-password/<token>` | Verify the reset link and set a new password | No |
+| Method    | Route                     | Description                                     | Auth |
+| --------- | ------------------------- | ----------------------------------------------- | ---- |
+| GET, POST | `/forgot-password`        | Show the form and request a password reset link | No   |
+| GET, POST | `/reset-password/<token>` | Verify the reset link and set a new password    | No   |
 
 **Lists** (all require login)
 
@@ -277,5 +277,5 @@ Reset tokens are stored in the database as SHA-256 hashes, not as the original t
 
 <img width="1917" height="927" alt="task-list" src="https://github.com/user-attachments/assets/73646e9d-b627-434b-86ba-63bc7ca988f1" />
 <img width="1917" height="926" alt="undo-toast" src="https://github.com/user-attachments/assets/066239e3-2e13-47f3-a506-2d05ee686e7e" />
-<img width="1917" height="930" alt="new-task-modal" src="https://github.com/user-attachments/assets/19007602-424b-4e4a-9618-8fdb7b240421" />
+<img width="1917" height="930" alt="new-task-modal modal-md" src="https://github.com/user-attachments/assets/19007602-424b-4e4a-9618-8fdb7b240421" />
 <img width="1917" height="923" alt="delete-confirm" src="https://github.com/user-attachments/assets/03eb2f5e-b4a2-4bff-b981-d9d9dfd59197" />
