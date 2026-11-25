@@ -1,18 +1,31 @@
 # Tutuman - Todo App
 
-A multi-user todo web app for organizing, tracking, and categorizing tasks. Each person registers, logs in, and manages their own private task list.
+A multi-user todo web app for organizing, tracking, and categorizing tasks. Users can create personal task lists, collaborate through shared lists, and manage activities through a responsive interface.
 
 **Authors:** Cambel (@ed-cambel), Gelvezon (@thoenii)
 
 ## Features
 
-- **Account registration and login:** sign up with email, display name, and password. After login, the user goes straight to their To-Do List.
-- **Task management:** create, edit, complete, delete, and restore tasks, organized by due date, priority, and tag, with list/calendar views and status filters. Deletes are soft deletes with an undo toast.
-- **Private task list (UBAC):** every task belongs to one user, and the backend only lets that user read or change it.
-- **Profile management:** profile page with account details and task stats; edit display name, change password, or delete the account.
-- **Secure credentials:** passwords are stored as hashes, never as plain text.
-- **Persistent sessions:** users stay logged in across refreshes, back navigation, and server restarts, and pages are protected when signed out.
-- **Password recovery:** reset links are emailed to the registered address.
+### Account Management 
+- **Account Registration and Login:** Create an account with email address, display name, and password. After login, the user goes straight to their To-Do List.
+- **Profile Management:** Profile page with account details and task stats; edit display name, change password, or delete the account.
+- **Secure Credentials:** passwords are stored as hashes, never as plain text.
+- **Password Recovery:** Request a password reset link through email.
+- **Persistent Sessions:** Users remain logged in across refreshes, back navigation, and server restarts, and pages are protected when signed out.
+
+### Task Management
+- **CRUD Operations:** Create, view, edit, complete, and delete tasks.
+- **Task Organization:** Organize tasks by due date, priority (Low, Medium, High), and tag (School, Personal, Others).
+- **Task Filtering:** Filter tasks by completion status, priority, and category.
+- **Deletion:** Deleted tasks are temporarily retained instead of immediately being permanently removed.
+- **Undo Functionality:** Restore recently deleted tasks within a limited time.
+
+### Collaborative Lists
+- **Personal Lists:** Each registered user automatically receives their own private personal list.
+- **Shared Lists:** Create lists and invite other registered users through email addresses.
+- **Membership Management:** List owners can invite and remove members.
+- **Role-based Permissions:** Members can manage tasks, while owners have additional administrative permissions over their shared lists.
+
 
 ## Tech stack
 
@@ -23,44 +36,71 @@ A multi-user todo web app for organizing, tracking, and categorizing tasks. Each
 | Database       | MySQL (XAMPP / MariaDB) via `mysql-connector-python` and parameterized queries                                                      | Needed for a multi-user app with foreign keys. Replaces the SQLite database used in Activity 1.  |
 | Authentication | Session-based login. Passwords hashed with Werkzeug (`generate_password_hash` / `check_password_hash`). Sessions are signed cookies | Reused unchanged from Activity 2.                                                                |
 | Testing        | pytest with Flask's test client                                                                                                     | Exercises routes, including cross-user access attempts.                                          |
+| Email Sender        | Python SMTP (`smtplib`), Mailjet                                                                                                      | Sending password recovery emails.                                          |
+| Deployment        | add here                                                                                                      | add here                                          |
 
-## How Activity 1 and Activity 2 were merged
-
-- **Branches:** During Activity 2, branches `act-feat/crud-<lastname>` and `act-feat/auth-<lastname>` were already merged to form a working UBAC. Along with this merge, the minimum requirements were met.
-- **Strategy:** Each partner was assigned specific features and coded them in their own branch for Activity 2. Once a feature was done, its branch was merged into `main`, so `main` always holds the working copy of the project.
-- **Conflicts resolved:**
-  1.  Function parameters (`database.py`, `app.py`): adding the `users`, `lists`, `list_members`, and `password_resets` tables, and the `user_id` and `list_id` columns on `tasks`, meant existing functions needed extra parameters. For example, task functions that took only a `task_id` now also take the logged-in user's ID, read from `session["user_id"]` in the route, so the backend can check ownership or list membership.
-  2.  Routes (`app.py`): the task routes were updated to require login, pass the session user to the database functions.
-  3.  SQLite to MySQL migration: Activity 1 used SQLite, so database functions and queries were rewritten for MySQL (`%s` placeholders, MySQL types). The seeder (`seed.py`) also had to be updated, because it was missing arguments for the new schema fields (`user_id`) and failed with incomplete inserts.
 
 ## Project structure
 
 ```
 todo-app/
 ├── app.py            # Flask app and all routes
-├── database.py       # MySQL connection and every database operation
-├── schema.sql        # Table definitions
-├── .env              # Local secrets (not committed)
+├── database.py       # MySQL connection and every database operations
+├── mailer.py         # Email sending functionality 
+├── schema.sql        # Database table definitions
+├── seed.py           # Database seeding 
+├── requirements.txt  # Python dependencies
+├── Procfile 
+├── .env              # Local environment variables (not committed)
 ├── .env.example      # Names of the required variables
-├── templates/        # index, login, register, profile
+├── .gitignore
+├── templates/        # Jinja2 HTML templates
+│   ├── error.html
+│   ├── forgot_pass.html
+│   ├── index.html
+│   ├── login.html
+│   ├── profile.html
+│   ├── register.html
+│   └── reset_pass.html
+│
 ├── static/
-│   ├── css/
+│   ├── css/                # Stylesheets
+│   │   ├── auth.css
+│   │   ├── base.css
+│   │   ├── layout.css
+│   │   ├── main.css
+│   │   ├── modals.css
+│   │   ├── profiles.css
+│   │   ├── shared.css
+│   │   └── tasks.css
+│   │
 │   └── js/
-└── tests/            # pytest tests
+│       └── main.js         # Client-side interactions
+│
+├── tests/
+│   ├── check_users.py
+│   ├── conftest.py
+│   └── test_register.py
+│
+├── screenshots/            # Application screenshots
+│
+└── test_db.py              # Database connection checker
 ```
 
 ## Installation and local run
 
-**Requirements:** Python 3.10+, XAMPP (for MySQL), and a browser.
+### Prerequisites
 
-1. **Clone the repository**, check out the branch, and open the project folder:
+**Requirements:** Python 3.10+, Git, XAMPP (for MySQL), and a browser.
+
+### 1. Clone the Repository
 
 ```bash
-   git clone <repo-url>
+   git clone https://github.com/cmsc128-git2gether/tutuman
    cd <repo-folder>
 ```
 
-2. **Create and activate a virtual environment** (recommended):
+### 2. Create a Virtual Environment
 
 ```bash
    python -m venv venv
@@ -72,15 +112,17 @@ todo-app/
    source venv/bin/activate
 ```
 
-3. **Install the dependencies:**
+### 3. Install Dependencies
 
 ```bash
-   python -m pip install flask mysql-connector-python python-dotenv
+   python -m pip install flask -r requirements.txt 
 ```
 
 For the tests, also run `python -m pip install pytest`.
 
-4. **Create a `.env` file** next to `app.py`:
+### 4. Configure Environment Variables
+
+Create a `.env` file in the project root, alongside `app.py`.
 
 ```
    MYSQL_PASSWORD=
@@ -96,15 +138,25 @@ For the tests, also run `python -m pip install pytest`.
 
 - `.env` is listed in `.gitignore`. Never commit it.
 
-5. **Set up the database** (see the next section).
-6. **Start MySQL** in the XAMPP Control Panel.
-7. **Run the app:**
+### 5. Set Up the Database 
+
+(see the next section).
+
+### 6. Start MySQL 
+
+Open the XAMPP Control Panel.
+
+### 7. Run the Application
 
 ```bash
    python app.py
 ```
 
-Open **http://127.0.0.1:5000**. You'll be sent to the login page.
+Open the following address in your browser:
+
+**http://127.0.0.1:5000**
+
+You will be redirected to the login page.
 
 To run the tests (MySQL must be running):
 
@@ -113,6 +165,16 @@ python -m pytest -v
 ```
 
 The tests create accounts with the email domain `@test.invalid` and delete them before and after each test.
+
+## How Activity 1 and Activity 2 were merged
+
+- **Branches:** During Activity 2, branches `act-feat/crud-<lastname>` and `act-feat/auth-<lastname>` were already merged to form a working UBAC. Along with this merge, the minimum requirements were met.
+- **Strategy:** Each partner was assigned specific features and coded them in their own branch for Activity 2. Once a feature was done, its branch was merged into `main`, so `main` always holds the working copy of the project.
+- **Conflicts resolved:**
+  1.  Function parameters (`database.py`, `app.py`): adding the `users`, `lists`, `list_members`, and `password_resets` tables, and the `user_id` and `list_id` columns on `tasks`, meant existing functions needed extra parameters. For example, task functions that took only a `task_id` now also take the logged-in user's ID, read from `session["user_id"]` in the route, so the backend can check ownership or list membership.
+  2.  Routes (`app.py`): the task routes were updated to require login, pass the session user to the database functions.
+  3.  SQLite to MySQL migration: Activity 1 used SQLite, so database functions and queries were rewritten for MySQL (`%s` placeholders, MySQL types). The seeder (`seed.py`) also had to be updated, because it was missing arguments for the new schema fields (`user_id`) and failed with incomplete inserts.
+
 
 ## Database setup
 
@@ -123,9 +185,22 @@ The tests create accounts with the email domain `@test.invalid` and delete them 
 
 The connection settings (host `localhost`, user `root`, database `todo_app`) are in `DB_CONFIG` in `database.py`. The password comes from `.env`.
 
+
+### Database Tables
+
+| Table | Important Columns | Description |
+|---|---|---|
+| `users` | id (PK), email, display_name, password_hash, created_at | Stores registered user accounts |
+| `lists` | id (PK), name, owner_id (FK), is_personal, created_at | Stores personal and shared lists |
+| `list_members` | list_id (PK, FK), user_id (PK, FK), joined_at | Connects users to lists |
+| `tasks` | id (PK), user_id (FK), list_id (FK), title, due_date, due_time, priority, tag, completed, deleted, created_at | Stores task information |
+| `password_resets` | id (PK), user_id (FK), reset_token, expires_at, created_at | Stores password reset token hashes and expiration times |
+
 ## Schema
 
 Users, lists and tasks are stored in separate tables. A list belongs to one owner, users join lists through a membership table, and each task references the list it lives in and the user who created it, so no user data is duplicated inside list or task records.
+
+### Entity Relationships
 
 ```
 users (1) ────< lists (many)          owner
@@ -142,28 +217,25 @@ users (1) ────< tasks (many)          creator
   id  <──────── user_id (FK, ON DELETE CASCADE)
 ```
 
-| Table        | Columns                                                                                                                                                                     |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| users        | id (PK), email (unique), display_name, password_hash, created_at                                                                                                            |
-| lists        | id (PK), name, owner_id (FK to users.id, ON DELETE CASCADE), is_personal, created_at                                                                                        |
-| list_members | list_id (PK, FK to lists.id, ON DELETE CASCADE), user_id (PK, FK to users.id, ON DELETE CASCADE), joined_at                                                                 |
-| tasks        | id (PK), list_id (FK to lists.id, ON DELETE CASCADE), user_id (FK to users.id, ON DELETE CASCADE), title, due_date, due_time, priority, tag, completed, deleted, created_at |
-
 ### Relationships
 
 - A user owns many lists (`lists.owner_id`). Registration creates one personal list (`is_personal = 1`) and adds the user to it.
 - Users and lists are many-to-many through list_members. Every list has at least its owner as a member.
 - A list has many tasks (`tasks.list_id`). `tasks.user_id` records who created the task. It does not control who can see it.
 
-## Access control
+## Access Control and Security 
 
-Every query is scoped by the logged-in user's id from the session, never by an id sent from the client alone.
+Tutuman implements User-Based Access Control (UBAC) to ensure that users can only access lists and tasks they are authorized to manage.
+
+### User Roles
 
 | Role    | Determined by                    | Can                                                                                                     |
 | ------- | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Member  | row in `list_members`            | view the list, add, edit, complete, and restore deleted tasks                                           |
 | Owner   | `lists.owner_id` equals the user | can do what members can do, invite and remove members, delete the list, and delete tasks in their lists |
 | Creator | `tasks.user_id` equals the user  | edit and delete that task                                                                               |
+
+### Ownership Verification
 
 | Operation                                          | Ownership check                                                                            | On failure            |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------- |
@@ -193,9 +265,13 @@ def add_list_member(list_id):
     ...
 ```
 
-## Routes and ownership checks
+## Application Routes
 
-**Authentication and account**
+Tutuman uses Flask routes to handle authentication, account management, task operations, and collaborative lists.
+
+These are server-rendered application routes with form submissions and selected JavaScript requests, rather than a separate REST JSON API.
+
+**Authentication and Account Management**
 
 | Method    | Route               | Description                                                                   | Auth |
 | --------- | ------------------- | ----------------------------------------------------------------------------- | ---- |
@@ -215,7 +291,7 @@ def add_list_member(list_id):
 | GET, POST | `/forgot-password`        | Show the form and request a password reset link | No   |
 | GET, POST | `/reset-password/<token>` | Verify the reset link and set a new password    | No   |
 
-**Lists** (all require login)
+**List Management** (all require login)
 
 | Method | Route                 | Description                                                     | Who      |
 | ------ | --------------------- | --------------------------------------------------------------- | -------- |
@@ -225,7 +301,7 @@ def add_list_member(list_id):
 | POST   | `[route]`             | Remove a member                                                 | Owner    |
 | POST   | `[route]`             | Delete a shared list                                            | Owner    |
 
-**Tasks** (all require login)
+**Task Management** (all require login)
 
 | Method | Route            | Description                                  | Who     |
 | ------ | ---------------- | -------------------------------------------- | ------- |
@@ -272,6 +348,72 @@ Passwords are hashed with Werkzeug's `generate_password_hash`, which adds a rand
 ## Password recovery
 
 Reset tokens are stored in the database as SHA-256 hashes, not as the original tokens. The reset link containing the original token is sent to the user's registered email through SMTP and expires after 30 minutes. After verification, the user sets a new password, which is hashed with Werkzeug's `generate_password_hash`. The used token is deleted with `delete_reset_token` to prevent reuse. If SMTP is not configured or sending fails, the reset link is printed in the terminal for local testing.
+
+## Refactoring and Optimization
+
+As part of Laboratory Activity 4, Tutuman underwent code, backend, and frontend improvements to make the application more maintainable, efficient, and user-friendly.
+
+### 1. Code Organization
+
+Application responsibilities are separated into dedicated files:
+
+- `app.py` handles application configuration, routes, authentication, and request processing.
+- `database.py` handles database connections and SQL operations.
+- `mailer.py` handles password recovery email delivery.
+- `templates/` contains the server-rendered HTML pages.
+- `static/css/` organizes stylesheets by interface responsibility.
+- `static/js/` contains client-side interactions.
+
+This organization makes individual application components easier to understand and maintain.
+
+### 2. Database Optimization
+
+Several database design and query practices help reduce unnecessary data duplication and improve data access:
+
+- User information is stored separately in `users` instead of being repeated across tasks and lists.
+- `list_members` provides a many-to-many relationship between users and lists.
+- Foreign keys maintain relationships between database records.
+- Composite primary keys prevent duplicate list memberships.
+- The unique email constraint prevents duplicate accounts.
+- `INSERT ... SELECT` verifies membership while inserting tasks.
+- JOIN operations combine related records and apply access restrictions within database queries.
+- Aggregate SQL functions calculate task statistics without requiring individual task records to be processed separately in Python.
+
+### 3. Access Control Improvements
+
+Database operations enforce ownership and membership checks directly through their SQL statements.
+
+This reduces reliance on frontend restrictions and helps prevent unauthorized users from accessing or modifying another user's data.
+
+### 4. Session Improvements
+
+A password fingerprint is stored in the user's session. When a protected route is accessed, the application checks whether the fingerprint still matches the current password hash.
+
+This allows existing sessions to become invalid after a password change without requiring server-side session storage.
+
+---
+
+## UX/UI Improvements
+
+The interface was refined using HCI principles to improve consistency, visibility of system status, and ease of navigation.
+
+The improvements include:
+
+- **Consistent Styling:** Organized CSS files for authentication, layouts, tasks, modals, and profiles.
+- **Breadcrumb Navigation:** Helps users understand their current location within the application.
+- **Toast Notifications:** Provides feedback after task and account operations.
+- **Undo Feedback:** Allows users to recover from accidental task deletions.
+- **Custom Error Pages:** Provides understandable messages for errors such as 400, 403, and 404 instead of exposing raw error pages.
+- **Improved Navigation:** More consistent navigation across personal lists, shared lists, and account pages.
+- **Improved Forms and Modals:** Provides clearer interactions for creating and editing tasks.
+- **Responsive Styling:** CSS is organized to support different screen sizes.
+
+These improvements aim to make the application easier to navigate and reduce confusion when performing common tasks.
+
+---
+
+## Deployment
+-add details nlng ed
 
 ## Screenshots
 
