@@ -60,7 +60,8 @@ def init_db():
 
     cursor.close()
     conn.close()
-
+    
+    purge_deleted_tasks() 
 
 # ========================== TASKS ========================== #
 
@@ -220,7 +221,7 @@ def delete_task(task_id, user_id):
     cursor.execute(
         """UPDATE tasks t
         JOIN lists l ON l.id = t.list_id
-        SET t.deleted = 1
+        SET t.deleted = 1, t.deleted_at = NOW()
         WHERE t.id = %s AND l.owner_id = %s""",
         (task_id, user_id,)
     )
@@ -245,7 +246,7 @@ def restore_task(task_id, user_id):
         """
         UPDATE tasks t
         JOIN list_members m ON m.list_id = t.list_id
-        SET t.deleted = 0
+        SET t.deleted = , t.deleted_at = NULL
         WHERE t.id = %s AND m.user_id = %s""",
         (task_id, user_id)
     )
@@ -257,6 +258,29 @@ def restore_task(task_id, user_id):
     conn.close()
     return changed
 
+# permanently remove tasks that were soft-deleted more than `days` ago
+def purge_deleted_tasks(days=30):
+    conn = get_db_connection()
+
+    if conn is None:
+        return 0
+
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            DELETE FROM tasks
+            WHERE deleted = 1
+              AND deleted_at < NOW() - INTERVAL %s DAY
+            """,
+            (days,)
+        )
+        conn.commit()
+        return cursor.rowcount
+    finally:
+        cursor.close()
+        conn.close()
 
 # ========================== LISTS ========================== #
 
